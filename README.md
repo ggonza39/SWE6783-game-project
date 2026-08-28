@@ -11,7 +11,7 @@
 - **UX Designer**
   - TBD (User Journeys, GUI Mockups, Control Mapping & Usability Testing)
 - **Data Scientist**
-  - TBD (Player Interaction Telemetry, Gameplay Analytics & Difficulty Models)
+  - Jazmine Harvey (Player Interaction Telemetry, Gameplay Analytics & Difficulty Models)
 
 ## Project Overview
 This project focuses on the design and implementation of a simple 2D interactive arcade game built using the **Unity** engine. Rather than focusing on complex gamification mechanics or high-end graphics, the primary goal is to leverage Unity’s built-in physics engine, Asset Store components, and input mapping to explore core user interface (UI) design, player feedback loops, and ergonomic control mechanisms.
