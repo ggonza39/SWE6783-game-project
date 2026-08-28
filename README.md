@@ -9,7 +9,7 @@
 - **Developer**
   - TBD (Core Unity Architecture, C# Game Logic & Physics Implementation)
 - **UX Designer**
-  - TBD (User Journeys, GUI Mockups, Control Mapping & Usability Testing)
+  - Victor Nnadi (User Journeys, GUI Mockups, Control Mapping & Usability Testing)
 - **Data Scientist**
   - TBD (Player Interaction Telemetry, Gameplay Analytics & Difficulty Models)
 
