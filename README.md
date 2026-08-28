@@ -14,6 +14,9 @@
   - TBD (User Behavioral Analytics, Accessibility Data Evaluation & Mock Data Modeling)
 
 ## Project Overview
+This project focuses on the design and implementation of a simple 2D interactive arcade game built using the **Unity** engine. Rather than focusing on complex gamification mechanics or high-end graphics, the primary goal is to leverage Unity’s built-in physics engine, Asset Store components, and input mapping to explore core user interface (UI) design, player feedback loops, and ergonomic control mechanisms.
+
+The game places players in a 2D grid-based environment where they must navigate obstacles, collect target items, and manage an interactive control interface under simple constraint rules. The primary objective is to evaluate how clean GUI design and intuitive control UI can make basic gameplay responsive, accessible, and enjoyable—even for simple or straightforward game concepts.
 
 
 ## Tools & Collaboration
