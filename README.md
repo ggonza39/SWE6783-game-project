@@ -5,7 +5,7 @@
 
 ## Team Roster & Roles
 - **Team Lead**
-  - TBD (Project Management, Requirements Engineering & Sponsor Liaison)
+  - Gilberto Gonzalez (Project Management, Requirements Engineering)
 - **Developer**
   - TBD (Core Unity Architecture, C# Game Logic & Physics Implementation)
 - **UX Designer**
