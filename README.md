@@ -1,7 +1,7 @@
 # SWE6783-game-project
 
 ## Team Name
-- UX2026
+- Pixel Rebellion
 
 ## Team Roster & Roles
 - **Team Lead**
