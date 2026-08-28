@@ -1,2 +1,35 @@
 .vercel
 .env*
+
+# Unity generated directories
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ibrary/
+/[L2d]ibrary/
+/[Ll]ocal[Cc]ache/
+/[Ll]ogs/
+/[Oo]bj/
+/[Pp]roject[Ss]ettings/ProjectVersion.txt
+/[Tt]emp/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+
+# Visual Studio / IDE temporary files
+.vs/
+.idea/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
+
+# OS generated files
+.DS_Store
+Thumbs.db
