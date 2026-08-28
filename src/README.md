@@ -1,4 +1,4 @@
 # Application Source Code (`src`)
 
 ## Overview
-This folder contains the core web application codebase for the Tech Smart Learning for Seniors project.
+This folder contains Core Unity project directory (Assets, Scenes, Prefabs, and C# Scripts)
