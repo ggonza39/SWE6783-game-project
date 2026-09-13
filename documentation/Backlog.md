@@ -6,14 +6,14 @@ This document outlines the user stories and technical task breakdowns in logical
 
 ## Milestone 1: Project Setup & Core Player Movement (Weeks 1–2)
 
-### User Story 1.1: Core Unity Environment Setup
+### User Story 1.1: Core Unity Environment Setup - Story Points 3
 > *As a developer, I want a clean, structured Unity project configuration so that the team can build components independently without merge conflicts.*
 
 * **Task 1.1.1:** Initialize the Unity 2D project with Universal Render Pipeline (URP) inside the `/src` directory.
 * **Task 1.1.2:** Configure `vercel.json` and WebGL build settings to support proper MIME headers for WebGL asset loading.
 * **Task 1.1.3:** Establish the repository directory structure (`/documentation`, `/design`, `/src`, `/builds`, `/tests`) and set up feature-branch workflows.
 
-### User Story 1.2: Basic Player Movement & Physics
+### User Story 1.2: Basic Player Movement & Physics - Story Points 3
 > *As a player, I want to move my rebel character smoothly using WASD or arrow keys so that I can navigate the game environment.*
 
 * **Task 1.2.1:** Create the `Player` GameObject with a 2D Rigidbody, Box Collider 2D, and top-down sprite.
@@ -25,14 +25,14 @@ This document outlines the user stories and technical task breakdowns in logical
 
 ## Milestone 2: Security Forces & Detection Systems (Weeks 2–3)
 
-### User Story 2.1: Guard Patrol Routes & Detection Cones
+### User Story 2.1: Guard Patrol Routes & Detection Cones - Story Points 5
 > *As a player, I want to see guard vision cones and patrol paths so that I can time my movements to avoid detection.*
 
 * **Task 2.1.1:** Create `Guard.cs` enemy prefabs that move along predefined waypoint arrays (Patrol state).
 * **Task 2.1.2:** Implement a visual vision cone using a 2D Mesh or Polygon Collider to represent the field-of-view.
 * **Task 2.1.3:** Create raycasting checks to detect if the player enters the vision cone without line-of-sight blockage.
 
-### User Story 2.2: Fixed Camera Detection & Hiding Mechanics
+### User Story 2.2: Fixed Camera Detection & Hiding Mechanics - Story Points 5
 > *As a player, I want fixed security cameras and hiding spots so that I have environmental hazards to evade and safe zones to recover.*
 
 * **Task 2.2.1:** Develop `SecurityCamera.cs` with a sweeping cone angle that rotates over a fixed interval.
@@ -43,14 +43,14 @@ This document outlines the user stories and technical task breakdowns in logical
 
 ## Milestone 3: Mission Objectives & Level Logic (Weeks 3–4)
 
-### User Story 3.1: Evidence Collection & Terminal Interaction
+### User Story 3.1: Evidence Collection & Terminal Interaction - Story Points 3
 > *As a player, I want to gather evidence items and hack security terminals so that I can progress toward completing the mission.*
 
 * **Task 3.1.1:** Create `Evidence.cs` collectibles with trigger colliders; pressing `E` near evidence increments the evidence counter and score.
 * **Task 3.1.2:** Implement `Terminal.cs` objects that disable specific cameras or open locked pathways upon pressing `E`.
 * **Task 3.1.3:** Add pickup feedback for evidence collection and terminal activation.
 
-### User Story 3.2: Extraction Zone & Win/Loss Conditions
+### User Story 3.2: Extraction Zone & Win/Loss Conditions - Story Points 3
 > *As a player, I want a functional extraction point and clear win/loss rules so that I know when I have cleared or failed the level.*
 
 * **Task 3.2.1:** Implement `ExtractionZone.cs` that remains inactive until all required evidence items are collected.
@@ -61,14 +61,14 @@ This document outlines the user stories and technical task breakdowns in logical
 
 ## Milestone 4: User Interface, Audio & Controls (Weeks 4–5)
 
-### User Story 4.1: Persistent In-Game HUD (GUI)
+### User Story 4.1: Persistent In-Game HUD (GUI) - Story Points 3
 > *As a player, I want a persistent status bar on my screen so that I can monitor my score, lives, alert level, and evidence count in real time.*
 
 * **Task 4.1.1:** Construct the top Unity Canvas HUD with a pixel-art style and high-contrast text labels.
 * **Task 4.1.2:** Bind `AlertManager` and player stats to HUD UI elements (**SCORE**, **LIVES**, **ALERT %**, **EVIDENCE X/Y**).
 * **Task 4.1.3:** Apply the color palette: Green (Safe/Exit), Yellow (Warning), Red (Danger/Alert), Blue (Evidence).
 
-### User Story 4.2: Menus & Error Prevention
+### User Story 4.2: Menus & Error Prevention - Story Points 3
 > *As a player, I want clear start, pause, and menu screens so that I can manage my game session without accidental loss of progress.*
 
 * **Task 4.2.1:** Create Main Menu UI with **Start Game**, **Difficulty**, **How to Play**, **Settings**, and **Exit** options.
@@ -79,14 +79,14 @@ This document outlines the user stories and technical task breakdowns in logical
 
 ## Milestone 5: Difficulty Modes, Telemetry & Polish (Weeks 5–6)
 
-### User Story 5.1: Difficulty Scaling & Usability Polish
+### User Story 5.1: Difficulty Scaling & Usability Polish - Story Points 3
 > *As a player, I want Easy and Hard difficulty modes so that I can choose a challenge level suited to my experience.*
 
 * **Task 5.1.1:** Implement Easy Mode with slower guard patrols, narrower vision cones, and slower alert growth.
 * **Task 5.1.2:** Implement Hard Mode with faster guard patrols, wider sweeping camera cones, and increased detection sensitivity.
 * **Task 5.1.3:** Add interaction logging (completion time, detection counts, evidence metrics) to evaluate usability test results.
 
-### User Story 5.2: Final WebGL Build & Deployment
+### User Story 5.2: Final WebGL Build & Deployment - Story Points 3
 > *As a team lead, I want a fully tested WebGL build hosted on Vercel so that evaluators can test the game online.*
 
 * **Task 5.2.1:** Conduct usability playtesting passes to refine mechanics and resolve collision or UI issues.
