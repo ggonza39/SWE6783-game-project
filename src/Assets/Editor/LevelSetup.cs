@@ -7,6 +7,9 @@ public static class LevelSetup
     [MenuItem("Pixel Rebellion/Setup Level Bounds")]
     public static void SetupLevelBounds()
     {
+        if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
+
         // Remove old bounds if the setup is run again
         GameObject existingBounds = GameObject.Find("LevelBounds");
 

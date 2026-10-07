@@ -11,6 +11,9 @@ public static class GuardDetectionSetup
 
     private static void SetupDetection()
     {
+        if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
+
         GameObject guard = GameObject.Find("Guard");
 
         if (guard == null)

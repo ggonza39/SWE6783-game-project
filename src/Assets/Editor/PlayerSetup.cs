@@ -7,15 +7,22 @@ public static class PlayerSetup
     [MenuItem("Pixel Rebellion/Setup Player")]
     public static void SetupPlayer()
     {
+        if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
+
         GameObject existingPlayer = GameObject.Find("Player");
 
+        // Never recreate the Player: keep its components and scene references intact.
         if (existingPlayer != null)
         {
-            Object.DestroyImmediate(existingPlayer);
+            PlayerSpriteSetup.ApplyToPlayer(true);
+            return;
         }
 
         GameObject player = new GameObject("Player");
         player.transform.position = Vector3.zero;
+        player.transform.localScale = new Vector3(1.5f, 1.5f, 1f);
+        player.tag = "Player";
 
         // Create visible temporary player sprite
         SpriteRenderer renderer = player.AddComponent<SpriteRenderer>();
@@ -37,6 +44,7 @@ public static class PlayerSetup
         );
 
         renderer.sprite = sprite;
+        renderer.sortingOrder = 10;
 
         // Physics
         Rigidbody2D rb = player.AddComponent<Rigidbody2D>();
@@ -47,6 +55,8 @@ public static class PlayerSetup
 
         // Movement controller
         player.AddComponent<PlayerController>();
+
+        PlayerSpriteSetup.ApplyToPlayer(false);
 
         Selection.activeGameObject = player;
 

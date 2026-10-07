@@ -12,6 +12,9 @@ public static class SecurityCameraSetup
 
     private static void SetupCamera()
     {
+        if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
+
         GameObject cameraObject = GameObject.Find("SecurityCamera");
 
         if (cameraObject == null)
