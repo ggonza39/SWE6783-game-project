@@ -2,10 +2,12 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 
-// Applies Assets/sprites/player/player_topdown.png to the existing Player.
+// Automatically applies and sizes the player sprite.
+// No manual cropping, resizing, or dragging required.
 public class PlayerSpriteSetup : AssetPostprocessor
 {
-    public const string SpritePath = "Assets/sprites/player/player_topdown.png";
+    public const string SpritePath =
+        "Assets/sprites/player/player_topdown.png";
 
     private const float TargetHeight = 1.5f;
     private const float PixelsPerUnit = 64f;
@@ -16,23 +18,34 @@ public class PlayerSpriteSetup : AssetPostprocessor
             return;
 
         TextureImporter importer = (TextureImporter)assetImporter;
+
         importer.textureType = TextureImporterType.Sprite;
         importer.spriteImportMode = SpriteImportMode.Single;
         importer.spritePixelsPerUnit = PixelsPerUnit;
         importer.filterMode = FilterMode.Point;
-        importer.textureCompression = TextureImporterCompression.Uncompressed;
+        importer.textureCompression =
+            TextureImporterCompression.Uncompressed;
+
         importer.alphaIsTransparency = true;
         importer.mipmapEnabled = false;
+
+        // Allows us to inspect the pixels automatically.
+        importer.isReadable = true;
     }
 
     private static void OnPostprocessAllAssets(
-        string[] imported, string[] deleted, string[] moved, string[] movedFrom)
+        string[] imported,
+        string[] deleted,
+        string[] moved,
+        string[] movedFrom)
     {
         foreach (string path in imported)
         {
             if (path == SpritePath)
             {
-                EditorApplication.delayCall += () => ApplyToPlayer(false);
+                EditorApplication.delayCall += () =>
+                    ApplyToPlayer(false);
+
                 return;
             }
         }
@@ -44,22 +57,29 @@ public class PlayerSpriteSetup : AssetPostprocessor
         ApplyToPlayer(true);
     }
 
-    // Returns true if the PNG sprite was applied to the existing Player.
     public static bool ApplyToPlayer(bool verbose)
     {
-        if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
+        if (EditorApplication.isPlaying ||
+            EditorApplication.isPlayingOrWillChangePlaymode)
         {
             if (verbose)
-                Debug.LogWarning("Exit Play Mode before applying the player sprite.");
+                Debug.LogWarning(
+                    "Exit Play Mode before applying player sprite.");
+
             return false;
         }
 
-        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
+        Sprite sprite =
+            AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
 
-        if (sprite == null)
+        Texture2D texture =
+            AssetDatabase.LoadAssetAtPath<Texture2D>(SpritePath);
+
+        if (sprite == null || texture == null)
         {
-            if (verbose)
-                Debug.LogWarning("Player sprite not found. Place a PNG at " + SpritePath);
+            Debug.LogWarning(
+                "Player sprite not found at " + SpritePath);
+
             return false;
         }
 
@@ -67,12 +87,14 @@ public class PlayerSpriteSetup : AssetPostprocessor
 
         if (player == null)
         {
-            if (verbose)
-                Debug.LogWarning("No Player in the open scene. Open SampleScene first.");
+            Debug.LogWarning(
+                "Player GameObject not found.");
+
             return false;
         }
 
-        SpriteRenderer renderer = player.GetComponent<SpriteRenderer>();
+        SpriteRenderer renderer =
+            player.GetComponent<SpriteRenderer>();
 
         if (renderer == null)
             renderer = player.AddComponent<SpriteRenderer>();
@@ -81,24 +103,119 @@ public class PlayerSpriteSetup : AssetPostprocessor
         renderer.color = Color.white;
         renderer.sortingOrder = 10;
 
-        // Scale so the sprite is TargetHeight world units tall, and fit the collider to it.
-        Vector2 size = sprite.bounds.size;
-        float scale = TargetHeight / Mathf.Max(size.y, 0.0001f);
-        player.transform.localScale = new Vector3(scale, scale, 1f);
+        // --------------------------------------------------
+        // AUTOMATICALLY FIND VISIBLE CHARACTER PIXELS
+        // --------------------------------------------------
 
-        BoxCollider2D collider = player.GetComponent<BoxCollider2D>();
+        Color32[] pixels = texture.GetPixels32();
+
+        int minX = texture.width;
+        int minY = texture.height;
+        int maxX = -1;
+        int maxY = -1;
+
+        bool foundCharacter = false;
+
+        for (int y = 0; y < texture.height; y++)
+        {
+            for (int x = 0; x < texture.width; x++)
+            {
+                Color32 pixel =
+                    pixels[y * texture.width + x];
+
+                // Ignore transparent pixels.
+                if (pixel.a > 10)
+                {
+                    foundCharacter = true;
+
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+        }
+
+        if (!foundCharacter)
+        {
+            Debug.LogWarning(
+                "No visible pixels found in player sprite.");
+
+            return false;
+        }
+
+        // --------------------------------------------------
+        // AUTOMATIC PLAYER SIZE
+        // --------------------------------------------------
+
+        int visibleWidthPixels =
+            maxX - minX + 1;
+
+        int visibleHeightPixels =
+            maxY - minY + 1;
+
+        float visibleWidthWorld =
+            visibleWidthPixels / PixelsPerUnit;
+
+        float visibleHeightWorld =
+            visibleHeightPixels / PixelsPerUnit;
+
+        float scale =
+            TargetHeight /
+            Mathf.Max(visibleHeightWorld, 0.0001f);
+
+        player.transform.localScale =
+            new Vector3(scale, scale, 1f);
+
+        // --------------------------------------------------
+        // AUTOMATIC COLLIDER SIZE
+        // --------------------------------------------------
+
+        BoxCollider2D collider =
+            player.GetComponent<BoxCollider2D>();
 
         if (collider != null)
         {
-            collider.size = size;
-            collider.offset = sprite.bounds.center;
+            collider.size =
+                new Vector2(
+                    visibleWidthWorld,
+                    visibleHeightWorld);
+
+            float centerX =
+                (
+                    (minX + maxX + 1) / 2f -
+                    texture.width / 2f
+                ) / PixelsPerUnit;
+
+            float centerY =
+                (
+                    (minY + maxY + 1) / 2f -
+                    texture.height / 2f
+                ) / PixelsPerUnit;
+
+            collider.offset =
+                new Vector2(centerX, centerY);
         }
 
+        // --------------------------------------------------
+        // SAVE EVERYTHING AUTOMATICALLY
+        // --------------------------------------------------
+
         EditorUtility.SetDirty(player);
-        EditorSceneManager.MarkSceneDirty(player.scene);
+
+        EditorSceneManager.MarkSceneDirty(
+            player.scene);
+
         EditorSceneManager.SaveOpenScenes();
 
-        Debug.Log("Player sprite applied from " + SpritePath);
+        Debug.Log(
+            "Player sprite automatically configured. " +
+            "Visible pixels: " +
+            visibleWidthPixels + "x" +
+            visibleHeightPixels +
+            " | Scale: " + scale);
+
         return true;
     }
 }
