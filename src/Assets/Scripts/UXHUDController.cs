@@ -7,6 +7,7 @@ public class UXHUDController : MonoBehaviour
 
     private GameObject terminal;
     private GameObject extractionZone;
+    private Collider2D extractionCollider;
     private EvidenceCollectible[] evidenceItems;
 
     private Texture2D briefingTexture;
@@ -50,6 +51,15 @@ public class UXHUDController : MonoBehaviour
         terminal = GameObject.Find("Terminal");
         extractionZone = GameObject.Find("ExtractionZone");
 
+        if (extractionZone != null)
+        {
+            extractionCollider =
+                extractionZone.GetComponent<Collider2D>();
+
+            if (extractionCollider != null)
+                extractionCollider.enabled = false;
+        }
+
         evidenceItems =
             FindObjectsByType<EvidenceCollectible>(
                 FindObjectsSortMode.None
@@ -62,6 +72,7 @@ public class UXHUDController : MonoBehaviour
         }
 
         CreateTextures();
+        ConfigureGameplayViewport();
 
         Time.timeScale = 0f;
     }
@@ -109,6 +120,9 @@ public class UXHUDController : MonoBehaviour
                 EvidenceManager.Instance.EvidenceCollected > 0)
             {
                 terminalAccessed = true;
+
+                if (extractionCollider != null)
+                    extractionCollider.enabled = true;
             }
         }
     }
@@ -190,62 +204,6 @@ public class UXHUDController : MonoBehaviour
             playerHiding != null &&
             playerHiding.IsHidden;
 
-        Rect leftPanel =
-            new Rect(18, 18, 300, 126);
-
-        DrawPanel(leftPanel, darkTex, cyanTex);
-
-        GUI.Label(
-            new Rect(35, 28, 265, 30),
-            "PIXEL REBELLION",
-            TitleStyle(20)
-        );
-
-        GUI.Label(
-            new Rect(35, 65, 250, 24),
-            "EVIDENCE   " +
-            evidence + " / " + totalEvidence,
-            TextStyle(17, Color.white)
-        );
-
-        GUI.Label(
-            new Rect(35, 95, 250, 24),
-            hidden
-                ? "STATUS     HIDDEN"
-                : "STATUS     VISIBLE",
-            TextStyle(
-                17,
-                hidden
-                    ? new Color(0.35f, 1f, 0.48f)
-                    : new Color(1f, 0.85f, 0.25f)
-            )
-        );
-
-        Rect objectivePanel =
-            new Rect(
-                Screen.width - 368,
-                18,
-                350,
-                126
-            );
-
-        DrawPanel(
-            objectivePanel,
-            darkTex,
-            cyanTex
-        );
-
-        GUI.Label(
-            new Rect(
-                Screen.width - 345,
-                28,
-                305,
-                28
-            ),
-            "CURRENT OBJECTIVE",
-            TitleStyle(18)
-        );
-
         string objective;
 
         if (evidence < totalEvidence)
@@ -254,162 +212,211 @@ public class UXHUDController : MonoBehaviour
         }
         else if (!terminalAccessed)
         {
-            objective = "ACCESS SECURITY TERMINAL  [E]";
+            objective = "ACCESS SECURITY TERMINAL [E]";
         }
         else
         {
             objective = "REACH EXTRACTION";
         }
 
-        GUI.Label(
-            new Rect(
-                Screen.width - 345,
-                70,
-                305,
-                44
-            ),
-            objective,
-            TextStyle(
-                17,
-                new Color(0.45f, 1f, 0.55f)
-            )
-        );
-
-        Rect controls =
-            new Rect(
-                Screen.width / 2f - 335,
-                Screen.height - 54,
-                670,
-                38
-            );
+        float topBarHeight = 58f;
 
         DrawPanel(
-            controls,
+            new Rect(0, 0, Screen.width, topBarHeight),
             darkTex,
             cyanTex
         );
 
         GUI.Label(
-            new Rect(
-                controls.x + 10,
-                controls.y + 7,
-                controls.width - 20,
-                24
-            ),
-            "WASD / ARROWS  MOVE    SHIFT  SPRINT    E  INTERACT    ESC: PAUSE / HELP",
+            new Rect(14, 7, 205, 44),
+            "PIXEL REBELLION",
+            TitleStyle(17)
+        );
+
+        GUI.Label(
+            new Rect(220, 7, 165, 44),
+            "EVIDENCE  " + evidence + " / " + totalEvidence,
             CenterStyle(14, Color.white)
+        );
+
+        GUI.Label(
+            new Rect(385, 7, 180, 44),
+            hidden
+                ? "STATUS  HIDDEN"
+                : "STATUS  VISIBLE",
+            CenterStyle(
+                14,
+                hidden
+                    ? new Color(0.35f, 1f, 0.48f)
+                    : new Color(1f, 0.85f, 0.25f)
+            )
+        );
+
+        GUI.Label(
+            new Rect(
+                565,
+                7,
+                Mathf.Max(220f, Screen.width - 579f),
+                44
+            ),
+            "OBJECTIVE:  " + objective,
+            CenterStyle(
+                14,
+                new Color(0.45f, 1f, 0.55f)
+            )
         );
 
         DrawContextPrompt(evidence);
     }
-
     private void DrawContextPrompt(int evidence)
     {
-        if (player == null)
-            return;
-
         string message = "";
-        Texture2D border = yellowTex;
+        Texture2D border = cyanTex;
 
-        float closestEvidenceDistance =
-            float.MaxValue;
-
-        if (evidenceItems != null)
+        if (player != null)
         {
-            foreach (EvidenceCollectible item
-                     in evidenceItems)
-            {
-                if (item == null)
-                    continue;
+            float closestEvidenceDistance =
+                float.MaxValue;
 
-                float d = Vector2.Distance(
+            if (evidenceItems != null)
+            {
+                foreach (EvidenceCollectible item
+                         in evidenceItems)
+                {
+                    if (item == null)
+                        continue;
+
+                    float distance =
+                        Vector2.Distance(
+                            player.position,
+                            item.transform.position
+                        );
+
+                    if (distance < closestEvidenceDistance)
+                        closestEvidenceDistance = distance;
+                }
+            }
+
+            if (closestEvidenceDistance <= 2f)
+            {
+                message =
+                    "EVIDENCE FOUND  -  MOVE CLOSER TO COLLECT";
+                border = cyanTex;
+            }
+
+            if (terminal != null &&
+                Vector2.Distance(
                     player.position,
-                    item.transform.position
-                );
+                    terminal.transform.position
+                ) <= 2f)
+            {
+                if (evidence < 1)
+                {
+                    message =
+                        "TERMINAL LOCKED  -  COLLECT EVIDENCE";
+                    border = redTex;
+                }
+                else if (terminalAccessed)
+                {
+                    message = "TERMINAL ACCESSED";
+                    border = greenTex;
+                }
+                else
+                {
+                    message =
+                        "PRESS E TO ACCESS SECURITY TERMINAL";
+                    border = greenTex;
+                }
+            }
 
-                if (d < closestEvidenceDistance)
-                    closestEvidenceDistance = d;
-            }
-        }
-
-        if (closestEvidenceDistance <= 2f)
-        {
-            message =
-                "EVIDENCE FOUND  -  MOVE CLOSER TO COLLECT";
-            border = cyanTex;
-        }
-
-        if (terminal != null &&
-            Vector2.Distance(
-                player.position,
-                terminal.transform.position
-            ) <= 2f)
-        {
-            if (evidence < 1)
+            if (extractionZone != null &&
+                Vector2.Distance(
+                    player.position,
+                    extractionZone.transform.position
+                ) <= 2.2f)
             {
-                message =
-                    "TERMINAL LOCKED  -  COLLECT EVIDENCE";
-                border = redTex;
-            }
-            else if (terminalAccessed)
-            {
-                message =
-                    "TERMINAL ACCESSED";
-                border = greenTex;
-            }
-            else
-            {
-                message =
-                    "PRESS E TO ACCESS SECURITY TERMINAL";
-                border = greenTex;
-            }
-        }
-
-        if (extractionZone != null &&
-            Vector2.Distance(
-                player.position,
-                extractionZone.transform.position
-            ) <= 2.2f)
-        {
-            if (evidence < totalEvidence)
-            {
-                message =
-                    "EXTRACTION LOCKED  -  COLLECT EVIDENCE";
-                border = redTex;
-            }
-            else
-            {
-                message =
-                    "EXTRACTION ZONE";
-                border = greenTex;
+                if (evidence < totalEvidence)
+                {
+                    message =
+                        "EXTRACTION LOCKED  -  COLLECT EVIDENCE";
+                    border = redTex;
+                }
+                else if (!terminalAccessed)
+                {
+                    message =
+                        "EXTRACTION LOCKED  -  ACCESS TERMINAL";
+                    border = redTex;
+                }
+                else
+                {
+                    message = "EXTRACTION ZONE";
+                    border = greenTex;
+                }
             }
         }
 
         if (string.IsNullOrEmpty(message))
-            return;
+        {
+            message =
+                "WASD / ARROWS  MOVE    SHIFT  SPRINT    E  INTERACT    ESC  PAUSE / HELP";
+            border = cyanTex;
+        }
 
-        Rect prompt =
+        float bottomBarHeight = 46f;
+
+        Rect bottomBar =
             new Rect(
-                Screen.width / 2f - 280,
-                Screen.height - 108,
-                560,
-                42
+                0,
+                Screen.height - bottomBarHeight,
+                Screen.width,
+                bottomBarHeight
             );
 
-        DrawPanel(prompt, darkTex, border);
+        DrawPanel(
+            bottomBar,
+            darkTex,
+            border
+        );
 
         GUI.Label(
             new Rect(
-                prompt.x + 10,
-                prompt.y + 7,
-                prompt.width - 20,
-                28
+                12,
+                bottomBar.y + 6,
+                Screen.width - 24,
+                34
             ),
             message,
-            CenterStyle(16, Color.white)
+            CenterStyle(13, Color.white)
         );
     }
 
+    private void ConfigureGameplayViewport()
+    {
+        Camera camera = Camera.main;
+
+        if (camera == null)
+            return;
+
+        float screenHeight =
+            Mathf.Max(1f, Screen.height);
+
+        float topSpace =
+            58f / screenHeight;
+
+        float bottomSpace =
+            46f / screenHeight;
+
+        camera.rect =
+            new Rect(
+                0f,
+                bottomSpace,
+                1f,
+                Mathf.Max(
+                    0.1f,
+                    1f - topSpace - bottomSpace
+                )
+            );
+    }
     private void DrawHelp()
     {
         GUI.DrawTexture(
@@ -645,6 +652,9 @@ public class UXHUDController : MonoBehaviour
         return texture;
     }
 }
+
+
+
 
 
 
