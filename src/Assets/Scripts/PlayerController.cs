@@ -24,6 +24,12 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        if (GameManager.Instance != null && GameManager.Instance.GameEnded)
+        {
+            movement = Vector2.zero;
+            return;
+        }
+
         float horizontal = Input.GetAxisRaw("Horizontal");
         float vertical = Input.GetAxisRaw("Vertical");
 
@@ -32,6 +38,12 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (GameManager.Instance != null && GameManager.Instance.GameEnded)
+        {
+            rb.linearVelocity = Vector2.zero;
+            return;
+        }
+
         float speed = Input.GetKey(KeyCode.LeftShift)
             ? moveSpeed * sprintMultiplier
             : moveSpeed;

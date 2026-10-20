@@ -6,6 +6,9 @@ public class ExtractionZone : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        if (GameManager.Instance != null && GameManager.Instance.GameEnded)
+            return;
+
         if (!other.CompareTag("Player"))
             return;
 
