@@ -8,59 +8,55 @@ using UnityEngine.InputSystem;
 public class TerminalInteraction : MonoBehaviour
 {
     [SerializeField] private int requiredEvidence = 1;
-
     private bool playerNearby;
+    private string message = "";
+    private float messageUntil;
 
     private void Update()
     {
-        if (!playerNearby)
-            return;
+        if (!playerNearby) return;
 
         if (GameManager.Instance != null &&
-            GameManager.Instance.GameEnded)
-            return;
+            GameManager.Instance.GameEnded) return;
 
-        bool ePressed = false;
+        bool pressed = false;
 
 #if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null &&
-            Keyboard.current.eKey.wasPressedThisFrame)
-        {
-            ePressed = true;
-        }
+        pressed = Keyboard.current != null &&
+                  Keyboard.current.eKey.wasPressedThisFrame;
 #endif
 
 #if ENABLE_LEGACY_INPUT_MANAGER
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            ePressed = true;
-        }
+        pressed |= Input.GetKeyDown(KeyCode.E);
 #endif
 
-        if (ePressed)
+        if (pressed)
         {
-            InteractWithTerminal();
+            var manager = EvidenceManager.Instance;
+
+            if (manager == null)
+                ShowMessage("Evidence Manager not found.");
+            else if (manager.HasEvidence(requiredEvidence))
+                ShowMessage("TERMINAL ACCESS GRANTED");
+            else
+                ShowMessage("TERMINAL LOCKED - Collect evidence first.");
         }
     }
 
-    private void InteractWithTerminal()
+    private void ShowMessage(string text)
     {
-        EvidenceManager manager = EvidenceManager.Instance;
+        message = text;
+        messageUntil = Time.time + 4f;
+        Debug.Log(text);
+    }
 
-        if (manager == null)
-        {
-            Debug.LogWarning("Evidence Manager not found.");
+    private void OnGUI()
+    {
+        if (Time.time > messageUntil || string.IsNullOrEmpty(message))
             return;
-        }
 
-        if (manager.HasEvidence(requiredEvidence))
-        {
-            Debug.Log("Terminal accessed successfully.");
-        }
-        else
-        {
-            Debug.Log("Terminal locked. Collect more evidence first.");
-        }
+        GUI.Box(new Rect(Screen.width / 2f - 200, 30, 400, 50),
+                message);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -68,15 +64,13 @@ public class TerminalInteraction : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             playerNearby = true;
-            Debug.Log("Press E to access terminal.");
+            ShowMessage("Press E to access terminal");
         }
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
         if (other.CompareTag("Player"))
-        {
             playerNearby = false;
-        }
     }
 }
