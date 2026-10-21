@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 public class SecurityCamera : MonoBehaviour
@@ -9,19 +10,54 @@ public class SecurityCamera : MonoBehaviour
 
     private float startingAngle;
     private Transform player;
+    private PlayerHiding playerHiding;
 
     private void Start()
     {
         startingAngle = transform.eulerAngles.z;
 
-        GameObject playerObject = GameObject.Find("Player");
+        // Find the player by tag, falling back to name.
+        GameObject playerObject = null;
+
+        try
+        {
+            playerObject = GameObject.FindWithTag("Player");
+        }
+        catch (UnityException)
+        {
+            Debug.LogWarning(
+                "SecurityCamera: Player tag not found. Using name lookup."
+            );
+        }
+
+        if (playerObject == null)
+        {
+            playerObject = GameObject.Find("Player");
+        }
 
         if (playerObject != null)
+        {
             player = playerObject.transform;
+            playerHiding = playerObject.GetComponent<PlayerHiding>();
+        }
+        else
+        {
+            Debug.LogWarning(
+                "SecurityCamera: Player GameObject not found in scene."
+            );
+        }
     }
 
     private void Update()
     {
+        // Stop camera activity when the game ends
+        // or the GameManager is unavailable.
+        if (GameManager.Instance == null ||
+            GameManager.Instance.GameEnded)
+        {
+            return;
+        }
+
         Sweep();
         DetectPlayer();
     }
@@ -39,7 +75,15 @@ public class SecurityCamera : MonoBehaviour
     private void DetectPlayer()
     {
         if (player == null)
+        {
             return;
+        }
+
+        // Hidden players cannot be detected.
+        if (playerHiding != null && playerHiding.IsHidden)
+        {
+            return;
+        }
 
         Vector2 directionToPlayer =
             (player.position - transform.position).normalized;
@@ -54,11 +98,40 @@ public class SecurityCamera : MonoBehaviour
             angle <= detectionAngle / 2f)
         {
             Debug.Log("Security camera detected the player!");
+
+            GameManager.Instance.LoseGame();
         }
     }
 
     private void OnDrawGizmos()
     {
-        Gizmos.DrawWireSphere(transform.position, detectionRange);
+        Gizmos.color = Color.yellow;
+
+        // Draw detection range.
+        Gizmos.DrawWireSphere(
+            transform.position,
+            detectionRange
+        );
+
+        // Draw detection cone boundaries.
+        Vector3 forward = transform.right;
+
+        Vector3 leftBoundary =
+            Quaternion.Euler(0f, 0f, detectionAngle / 2f)
+            * forward;
+
+        Vector3 rightBoundary =
+            Quaternion.Euler(0f, 0f, -detectionAngle / 2f)
+            * forward;
+
+        Gizmos.DrawRay(
+            transform.position,
+            leftBoundary * detectionRange
+        );
+
+        Gizmos.DrawRay(
+            transform.position,
+            rightBoundary * detectionRange
+        );
     }
 }

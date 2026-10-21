@@ -12,6 +12,9 @@ public static class EvidenceSetup
 
     private static void SetupEvidenceSystem()
     {
+        if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
+
         // Evidence Manager
         GameObject manager = GameObject.Find("EvidenceManager");
 

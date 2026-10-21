@@ -12,6 +12,9 @@ public static class HidingSetup
 
     private static void SetupHiding()
     {
+        if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
+
         GameObject player = GameObject.Find("Player");
 
         if (player != null && player.GetComponent<PlayerHiding>() == null)

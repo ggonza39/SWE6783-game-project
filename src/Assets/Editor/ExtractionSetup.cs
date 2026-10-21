@@ -12,6 +12,9 @@ public static class ExtractionSetup
 
     private static void SetupExtractionSystem()
     {
+        if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
+
         // Create Game Manager
         GameObject gameManager = GameObject.Find("GameManager");
 
