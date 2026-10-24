@@ -21,6 +21,9 @@ public class EvidenceManager : MonoBehaviour
     {
         EvidenceCollected += amount;
 
+        //Records number of evidence collected
+        GameplayMetrics.Instance?.RecordEvidence(amount);
+
         Debug.Log(
             "Evidence collected: " + EvidenceCollected
         );
