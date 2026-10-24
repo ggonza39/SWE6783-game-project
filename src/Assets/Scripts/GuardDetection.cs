@@ -62,6 +62,10 @@ public class GuardDetection : MonoBehaviour
             angle <= detectionAngle / 2f)
         {
             Debug.Log("Guard detected the player!");
+
+            //Records guard detection before the game ends
+            GameplayMetrics.Instance?.RecordGuardDetection();
+
             GameManager.Instance.LoseGame();
         }
     }
