@@ -26,6 +26,9 @@ public class GameManager : MonoBehaviour
         GameEnded = true;
         PlayerWon = true;
 
+        //Records if the player won the game
+        GameplayMetrics.Instance?.EndSession("Won");
+
         Debug.Log("MISSION COMPLETE - Player escaped successfully!");
     }
 
@@ -36,6 +39,9 @@ public class GameManager : MonoBehaviour
 
         GameEnded = true;
         PlayerWon = false;
+
+        //Records if the player lost the game
+        GameplayMetrics.Instance?.EndSession("Lost");
 
         Debug.Log("MISSION FAILED - Player was detected!");
     }

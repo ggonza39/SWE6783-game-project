@@ -9,6 +9,10 @@ public class PlayerHiding : MonoBehaviour
         if (other.CompareTag("HidingSpot"))
         {
             IsHidden = true;
+
+            //Records if player is hidden
+            GameplayMetrics.Instance?.RecordHiding();
+
             Debug.Log("Player is hidden.");
         }
     }

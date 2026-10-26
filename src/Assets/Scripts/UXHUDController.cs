@@ -183,8 +183,15 @@ public class UXHUDController : MonoBehaviour
             ? EvidenceManager.Instance.EvidenceCollected
             : 0;
 
-        briefingVisible = !startGameplayAfterReload;
+        //Creates a fresh record when player reloads the mission
+        bool autoStart = startGameplayAfterReload;
+
+        briefingVisible = !autoStart;
         startGameplayAfterReload = false;
+
+        if (autoStart)
+            GameplayMetrics.Instance?.StartSession();
+
 
         ConfigureGameplayViewport();
         Time.timeScale = briefingVisible ? 0f : 1f;
@@ -317,6 +324,9 @@ public class UXHUDController : MonoBehaviour
 
         if (!Input.GetKeyDown(KeyCode.E))
             return;
+
+        //Records every E-key terminal attempts
+        GameplayMetrics.Instance?.RecordTerminalInteraction();
 
         int evidence =
             EvidenceManager.Instance != null
@@ -1079,6 +1089,11 @@ public class UXHUDController : MonoBehaviour
         bool won =
             GameManager.Instance.PlayerWon;
 
+        //Records Player ID
+        string playerID = GameplayMetrics.Instance != null
+            ? GameplayMetrics.Instance.PlayerID
+            : "Unavailable";
+
         GUI.DrawTexture(
             new Rect(0, 0, Screen.width, Screen.height),
             blackTex
@@ -1171,6 +1186,19 @@ public class UXHUDController : MonoBehaviour
                 new Color(0.65f, 0.88f, 1f)
             )
         );
+
+
+        GUI.Label(
+            new Rect(
+                result.x + 45,
+                result.y + 290,
+                result.width - 90,
+                30
+            ),
+            "PLAYER ID: " + playerID,
+            CenterStyle(14, Color.yellow)
+        );
+
     }
 
     private void StartMission()
@@ -1179,6 +1207,9 @@ public class UXHUDController : MonoBehaviour
         helpVisible = false;
         toastMessage = "";
         Time.timeScale = 1f;
+
+        //Records when the player starts the mission
+        GameplayMetrics.Instance?.StartSession();
     }
 
     private void PauseGame()
@@ -1223,6 +1254,13 @@ public class UXHUDController : MonoBehaviour
 
     private void RetryMission()
     {
+        //Records when player restarts the mission
+        if (GameplayMetrics.Instance != null)
+        {
+            GameplayMetrics.Instance.RecordRestart();
+            GameplayMetrics.Instance.EndSession("Restarted");
+        }
+
         startGameplayAfterReload = true;
         restartConfirmationVisible = false;
         mainMenuConfirmationVisible = false;
@@ -1238,6 +1276,9 @@ public class UXHUDController : MonoBehaviour
 
     private void ReturnToMainMenu()
     {
+        //Records the player leaving an unfinished mission
+        GameplayMetrics.Instance?.EndSession("Abandoned");
+
         // "Main Menu" is the team's existing Mission Briefing / Start Mission
         // screen, not a separate new menu scene.
         startGameplayAfterReload = false;
