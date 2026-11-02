@@ -80,7 +80,7 @@ This document outlines the user stories and technical task breakdowns in logical
 ## Milestone 5: Difficulty Modes, Telemetry & Polish (Weeks 5–6)
 
 ### User Story 5.1: Difficulty Scaling & Usability Polish - Story Points 8
-> *As a player, I want Easy and Hard difficulty modes so that I can choose a challenge level suited to my experience.*
+> *As a player, I want clear environmental cues, understandable stealth mechanics, and difficulty options so that I can navigate the level, recognize hazards and objectives, and choose a challenge suited to my experience.*
 
 * **Task 5.1.1:** Implement Easy Mode with slower guard patrols, narrower vision cones, and slower alert growth.
 * **Task 5.1.2:** Implement Hard Mode with faster guard patrols, wider sweeping camera cones, and increased detection sensitivity.
