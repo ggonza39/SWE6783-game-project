@@ -79,12 +79,21 @@ This document outlines the user stories and technical task breakdowns in logical
 
 ## Milestone 5: Difficulty Modes, Telemetry & Polish (Weeks 5–6)
 
-### User Story 5.1: Difficulty Scaling & Usability Polish - Story Points 3
+### User Story 5.1: Difficulty Scaling & Usability Polish - Story Points 8
 > *As a player, I want Easy and Hard difficulty modes so that I can choose a challenge level suited to my experience.*
 
 * **Task 5.1.1:** Implement Easy Mode with slower guard patrols, narrower vision cones, and slower alert growth.
 * **Task 5.1.2:** Implement Hard Mode with faster guard patrols, wider sweeping camera cones, and increased detection sensitivity.
 * **Task 5.1.3:** Add interaction logging (completion time, detection counts, evidence metrics) to evaluate usability test results.
+
+**Revision Tasks:**
+* **Task 5.1.4** Player Sprite Visual Cleanup: Remove the black rectangular background surrounding the player sprite and ensure the sprite uses proper transparency so the character blends naturally into the game environment.
+* **Task 5.1.5** Level Layout & Navigation Refinement: Refine the open level into a facility-style layout using interior walls, corridors, rooms, corners, and alternate routes to create clearer navigation and more meaningful stealth decisions.
+* **Task 5.1.6** Camera Detection Visibility: Improve security-camera field-of-view indicators so players can clearly recognize the area monitored by each camera.
+* **Task 5.1.7** Navigation & Objective Cues: Add environmental navigation cues such as pathways, doors, lighting, floor markings, or objective indicators to help players understand where they can move and where objectives are located without removing exploration.
+* **Task 5.1.8** Stealth Environment Placement: Refine the placement of guards, cameras, hiding locations, evidence, terminals, and extraction points so the environment creates intentional stealth choices and supports alternate approaches through the level.
+* **Task 5.1.9** Interactive Object Visual Consistency: Apply consistent colors, icons, outlines, or other visual indicators to evidence, terminals, hiding locations, hazards, and extraction points so interactive elements are easy to distinguish and align with the HUD's visual language.
+
 
 ### User Story 5.2: Final WebGL Build & Deployment - Story Points 3
 > *As a team lead, I want a fully tested WebGL build hosted on Vercel so that evaluators can test the game online.*
