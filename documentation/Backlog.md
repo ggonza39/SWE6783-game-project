@@ -87,6 +87,7 @@ This document outlines the user stories and technical task breakdowns in logical
 * **Task 5.1.3:** Add interaction logging (completion time, detection counts, evidence metrics) to evaluate usability test results.
 
 **Revision Tasks:**
+
 * **Task 5.1.4:** Player Sprite Visual Cleanup
 
 Remove the black rectangular background surrounding the player sprite and ensure proper transparency. Verify that the character displays correctly during movement and does not obscure nearby environmental objects.
