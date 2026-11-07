@@ -124,19 +124,19 @@ Apply consistent colors, icons, outlines, or visual indicators to evidence, term
 
 **Evaluation finding:** Students reported difficulty recognizing interactive objects and confirming successful interactions.
 
-* **Task 5.1.10:**  HUD Readability & Responsive Scaling (NEW)
+* **Task 5.1.10:**  HUD Readability & Responsive Scaling
 
 Improve the readability of HUD labels, objective information, and gameplay status indicators. Adjust text size, contrast, spacing, and Unity Canvas scaling to maintain readability across common screen resolutions, including high-resolution displays.
 
 **Evaluation finding:** Participants reported small or difficult-to-read interface text, particularly on high-resolution monitors.
 
-* **Task 5.1.11:** Tutorial & Contextual Instruction Refinement (NEW)
+* **Task 5.1.11:** Tutorial & Contextual Instruction Refinement
 
 Simplify the introductory instructions while preserving essential information about controls, objectives, and stealth mechanics. Use concise contextual prompts during gameplay to explain relevant actions without overwhelming or interrupting players.
 
 **Evaluation finding:** Students generally appreciated the mission briefing but sometimes considered it text-heavy.
 
-* **Task 5.1.12:**  Core Gameplay Verification & Regression Testing (NEW)
+* **Task 5.1.12:**  Core Gameplay Verification & Regression Testing
 
 Validate the revised gameplay mechanics and interface through focused testing. Confirm that guard and camera detection, sprint functionality, hiding, evidence collection, terminal interactions, objective progression, extraction, and win/loss conditions behave consistently. Verify that changes do not introduce new collision, control, or interface problems.
 
