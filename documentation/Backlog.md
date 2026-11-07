@@ -87,12 +87,59 @@ This document outlines the user stories and technical task breakdowns in logical
 * **Task 5.1.3:** Add interaction logging (completion time, detection counts, evidence metrics) to evaluate usability test results.
 
 **Revision Tasks:**
-* **Task 5.1.4** Player Sprite Visual Cleanup: Remove the black rectangular background surrounding the player sprite and ensure the sprite uses proper transparency so the character blends naturally into the game environment.
-* **Task 5.1.5** Level Layout & Navigation Refinement: Refine the open level into a facility-style layout using interior walls, corridors, rooms, corners, and alternate routes to create clearer navigation and more meaningful stealth decisions.
-* **Task 5.1.6** Camera Detection Visibility: Improve security-camera field-of-view indicators so players can clearly recognize the area monitored by each camera.
-* **Task 5.1.7** Navigation & Objective Cues: Add environmental navigation cues such as pathways, doors, lighting, floor markings, or objective indicators to help players understand where they can move and where objectives are located without removing exploration.
-* **Task 5.1.8** Stealth Environment Placement: Refine the placement of guards, cameras, hiding locations, evidence, terminals, and extraction points so the environment creates intentional stealth choices and supports alternate approaches through the level.
-* **Task 5.1.9** Interactive Object Visual Consistency: Apply consistent colors, icons, outlines, or other visual indicators to evidence, terminals, hiding locations, hazards, and extraction points so interactive elements are easy to distinguish and align with the HUD's visual language.
+### Task 5.1.4 — Player Sprite Visual Cleanup
+
+Remove the black rectangular background surrounding the player sprite and ensure proper transparency. Verify that the character displays correctly during movement and does not obscure nearby environmental objects.
+
+**Evaluation finding:** Students reported that the dark background interfered with environmental visibility.
+
+### Task 5.1.5 — Level Layout & Navigation Refinement
+
+Refine the existing facility layout with appropriate walls, corridors, corners, and pathways to improve navigation and create meaningful stealth opportunities. Prioritize targeted adjustments to the current level rather than a complete redesign.
+
+**Evaluation finding:** Some participants considered the level too short or insufficiently challenging.
+
+### Task 5.1.6 — Guard & Camera Detection Clarity
+
+Verify that guard and security-camera detection behavior matches the visible direction and field-of-view indicators. Improve detection cones and visual warning cues so players can recognize hazardous areas and understand when detection occurs.
+
+**Evaluation finding:** Participants reported unclear detection ranges, and telemetry showed a strong relationship between recorded detections and unsuccessful sessions.
+
+### Task 5.1.7 — Navigation, Objective Cues & Progress
+
+Improve environmental navigation cues and objective indicators so players can identify evidence, terminals, hiding locations, and extraction points. Provide clear contextual guidance and objective-progress information without interrupting gameplay.
+
+**Evaluation finding:** Participants sometimes understood the overall mission but struggled to identify specific objectives or determine their next action.
+
+### Task 5.1.8 — Stealth Environment Placement
+
+Review the placement of guards, cameras, hiding locations, evidence, terminals, and extraction points to encourage intentional stealth decisions. Make targeted adjustments to the existing level where necessary to improve challenge and reduce unintended shortcuts.
+
+**Evaluation finding:** Some participants completed the mission quickly without needing to use the available stealth mechanics.
+
+### Task 5.1.9 — Interactive Object Visibility & Feedback
+
+Apply consistent colors, icons, outlines, or visual indicators to evidence, terminals, hiding locations, and extraction points. Provide clear interaction prompts and confirmation when evidence is collected, terminals are activated, or objectives are completed.
+
+**Evaluation finding:** Students reported difficulty recognizing interactive objects and confirming successful interactions.
+
+### Task 5.1.10 — HUD Readability & Responsive Scaling (NEW)
+
+Improve the readability of HUD labels, objective information, and gameplay status indicators. Adjust text size, contrast, spacing, and Unity Canvas scaling to maintain readability across common screen resolutions, including high-resolution displays.
+
+**Evaluation finding:** Participants reported small or difficult-to-read interface text, particularly on high-resolution monitors.
+
+### Task 5.1.11 — Tutorial & Contextual Instruction Refinement (NEW)
+
+Simplify the introductory instructions while preserving essential information about controls, objectives, and stealth mechanics. Use concise contextual prompts during gameplay to explain relevant actions without overwhelming or interrupting players.
+
+**Evaluation finding:** Students generally appreciated the mission briefing but sometimes considered it text-heavy.
+
+### Task 5.1.12 — Core Gameplay Verification & Regression Testing (NEW)
+
+Validate the revised gameplay mechanics and interface through focused testing. Confirm that guard and camera detection, sprint functionality, hiding, evidence collection, terminal interactions, objective progression, extraction, and win/loss conditions behave consistently. Verify that changes do not introduce new collision, control, or interface problems.
+
+**Evaluation finding:** Student feedback identified possible inconsistencies in detection behavior, sprint responsiveness, and mission feedback that require direct verification.
 
 
 ### User Story 5.2: Final WebGL Build & Deployment - Story Points 3
