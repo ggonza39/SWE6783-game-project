@@ -89,4 +89,35 @@ public class GameManagerTests
 
         Assert.IsTrue(GameManager.Instance.TerminalActivated);
     }
+
+    [Test]
+    public void CanExtract_FalseWithNeitherEvidenceNorTerminal()
+    {
+        Assert.IsFalse(GameManager.Instance.CanExtract(1));
+    }
+
+    [Test]
+    public void CanExtract_FalseWithEvidenceOnly()
+    {
+        EvidenceManager.Instance.CollectEvidence(1);
+
+        Assert.IsFalse(GameManager.Instance.CanExtract(1));
+    }
+
+    [Test]
+    public void CanExtract_FalseWithTerminalOnly()
+    {
+        GameManager.Instance.ActivateTerminal();
+
+        Assert.IsFalse(GameManager.Instance.CanExtract(1));
+    }
+
+    [Test]
+    public void CanExtract_TrueWithBothEvidenceAndTerminal()
+    {
+        EvidenceManager.Instance.CollectEvidence(1);
+        GameManager.Instance.ActivateTerminal();
+
+        Assert.IsTrue(GameManager.Instance.CanExtract(1));
+    }
 }

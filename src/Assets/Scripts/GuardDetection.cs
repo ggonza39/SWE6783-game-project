@@ -97,6 +97,10 @@ public class GuardDetection : MonoBehaviour, IConeDetector
 
         IsPlayerDetected = true;
         Debug.Log("Guard detected the player!");
+
+        //Records guard detection before the game ends
+        GameplayMetrics.Instance?.RecordGuardDetection();
+
         GameManager.Instance.LoseGame();
     }
 

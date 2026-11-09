@@ -1,51 +1,55 @@
-# SWE6783-game-project
+# SWE6783-game-project: Pixel Rebellion — Shadow Protocol
 
 ## Team Name
 - Pixel Rebellion
 
 ## Team Roster & Roles
-- **Team Lead**
-  - Gilberto Gonzalez (Project Management, Requirements Engineering)
-- **Developer**
-  - TBD (Core Unity Architecture, C# Game Logic & Physics Implementation)
+- **Team Lead & Requirements Engineer**
+  - Gilberto Gonzalez (Project coordination, requirements management, meeting scheduling, milestone tracking, final submission preparation)
+- **Game Developer**
+  - Elvin Chi (Unity architecture, C# game logic, player controls, collisions, scoring, alert system, automated testing support, game builds)
 - **UX Designer**
-  - TBD (User Journeys, GUI Mockups, Control Mapping & Usability Testing)
-- **Data Scientist**
-  - TBD (Player Interaction Telemetry, Gameplay Analytics & Difficulty Models)
+  - Victor Nnadi (User journeys, GUI prototypes, control mappings, visual assets, usability testing plans)
+- **Data Scientist & Game Analyst**
+  - Jazmine Harvey (Gameplay metrics definition, user-testing analysis, performance-based difficulty tuning)
 
 ## Project Overview
-This project focuses on the design and implementation of a simple 2D interactive arcade game built using the **Unity** engine. Rather than focusing on complex gamification mechanics or high-end graphics, the primary goal is to leverage Unity’s built-in physics engine, Asset Store components, and input mapping to explore core user interface (UI) design, player feedback loops, and ergonomic control mechanisms.
+*Pixel Rebellion: Shadow Protocol* is a top-down 2D stealth and action game built using the **Unity** engine. Set in a futuristic city controlled by an automated security force, players take on the role of a rebel seeking to expose a government surveillance program by retrieving digital evidence and reaching an extraction point undetected.
 
-The game places players in a 2D grid-based environment where they must navigate obstacles, collect target items, and manage an interactive control interface under simple constraint rules. The primary objective is to evaluate how clean GUI design and intuitive control UI can make basic gameplay responsive, accessible, and enjoyable, even for simple or straightforward game concepts.
+Rather than relying on overly complex mechanics, the project focuses on user interaction engineering principles. It explores intuitive control schemes, persistent status feedback, visual hierarchy, and progressive difficulty balancing to deliver an accessible yet engaging player experience.
+
+### Key Game Elements
+- **Genre & Perspective:** Top-down 2D Stealth / Action
+- **Core Gameplay Mechanics:** Player movement, guard vision cones, camera detection areas, hiding spots, evidence collection, terminal interactions, and extraction zones
+- **Control Interface:** Primary WASD movement (with arrow-key options evaluated during usability testing), 'E' for interaction, 'Shift' to sprint, 'ESC' to pause, and 'R' for level restart
+- **Target Audience:** College students and young adults (ages 18–35), featuring both Easy and Hard modes to support varying player experience levels
 
 ## Tools & Collaboration
 
-The project uses the following tools to support design, development, accessibility testing, and project management:
-
 - **Version Control & Project Management:** GitHub  
-  GitHub is used to host the Unity source code repository, track issues, manage the product backlog, and document project artifacts. GitHub Issues and Projects serve as the foundation for user stories, tasks, and milestone deliverables.
+  Hosts the Unity source code repository, project backlogs, and documentation. The team utilizes feature branches and pull requests to maintain stability on the `main` branch.
 
-- **UI/UX & Interface Design:** Figma & PlantUML  
-  Figma and PlantUML are used to build control flow diagrams, wireframe the graphical user interface (GUI), map out control UI interaction states, and design player feedback loops prior to scene implementation.
+- **UI/UX & Interface Design:** Wireframing & Prototyping  
+  Used to construct control flow diagrams, wireframe the graphical user interface (GUI), map control interactions, and evaluate visual hierarchy prior to in-engine implementation.
 
 - **Game Engine & Programming:** Unity 2D (C#)  
-  Unity serves as the core 2D game engine, utilizing Unity UI (Canvas), 2D Physics (Rigidbodies, Colliders), C# scripting, and standard Unity Asset Store resources for rapid scene composition and prototyping.
+  Serves as the primary 2D game engine, utilizing Unity UI (Canvas), 2D Physics (Rigidbodies, Colliders), C# scripting, and asset configurations.
 
 - **Input & Control UI Mapping:** Unity Input System  
-  Configured to support accessible, multi-device control options including keyboard, mouse point-and-click, and gamepad controllers to evaluate control ergonomics.
+  Configured to support intuitive keyboard and mouse controls with persistent UI control reminders in the tutorial and pause menus.
 
-- **Usability & UX Testing:** In-Engine Telemetry & Observational Testing  
-  Qualitative usability testing logs and basic player interaction telemetry are recorded during playtesting sessions to evaluate GUI clarity, task completion rates, and input friction.
+- **Usability & UX Testing:** In-Engine Telemetry & User Playtesting  
+  Log files and player performance metrics (completion time, detection counts, evidence gathered) are collected and analyzed across testing cycles to drive Version 2 refinements.
 
 - **Build Pipeline & Web Hosting:** Unity WebGL & Vercel  
-  Unity is configured to target WebGL builds. Vercel is used to host the compiled static WebGL deployment for easy, browser-accessible testing and submission reviews.
+  Configured to target WebGL static exports deployed via Vercel for browser-accessible playtesting and submission reviews.
 
-- **Team Communication:** Microsoft Teams  
-  Used for weekly meetings, asynchronous team coordination, sprint reviews, and development updates.
+- **Team Communication:** Microsoft Teams & GitHub Issues  
+  Utilized for weekly progress syncs, task tracking, sprint planning, and development updates.
 
 ## Repository Structure
-- `/documentation` — Project design proposal PDF, research questions, and architecture docs
-- `/design` — Wireframes, paper prototypes, GUI mockups, and control flow diagrams
-- `/src` — Core Unity project directory (Assets, Scenes, Prefabs, and C# Scripts)
+- `/documentation` — Project proposal reports, UX research questions, and meeting notes
+- `/design` — GUI mockups, wireframes, visual assets, and control layout schematics
+- `/src` — Core Unity source project directory (Assets, Scenes, Prefabs, and C# Scripts)
 - `/builds` — Compiled Unity WebGL exports ready for deployment
-- `/tests` — Usability test plans, playtesting logs, and control interaction evaluations
+- `/tests` — Automated testing scripts, playtesting logs, and usability evaluation plans

@@ -142,6 +142,9 @@ public class SecurityCamera : MonoBehaviour, IConeDetector
         IsPlayerDetected = true;
         Debug.Log("Security camera detected the player!");
 
+        //Records camera detection before the game ends
+        GameplayMetrics.Instance?.RecordCameraDetection();
+
         GameManager.Instance.LoseGame();
     }
 

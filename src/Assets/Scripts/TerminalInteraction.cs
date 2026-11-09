@@ -5,6 +5,13 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
+public enum TerminalMessageTone
+{
+    Info,
+    Success,
+    Warning
+}
+
 public class TerminalInteraction : MonoBehaviour
 {
     [SerializeField] private int requiredEvidence = 1;
@@ -15,8 +22,13 @@ public class TerminalInteraction : MonoBehaviour
 
     private bool playerNearby;
     private bool activated;
-    private string message = "";
-    private float messageUntil;
+
+    // Terminal hacking logic lives here; on-screen presentation (toasts,
+    // prompts, the HUD) is owned by UXHUDController, which reads these
+    // instead of this component drawing its own competing GUI.
+    public string LastMessage { get; private set; } = "";
+    public TerminalMessageTone LastMessageTone { get; private set; } = TerminalMessageTone.Info;
+    public float LastMessageTime { get; private set; } = -1f;
 
     private void Update()
     {
@@ -42,9 +54,12 @@ public class TerminalInteraction : MonoBehaviour
 
     private void TryActivate()
     {
+        //Records every E-key terminal attempt
+        GameplayMetrics.Instance?.RecordTerminalInteraction();
+
         if (activated)
         {
-            ShowMessage("TERMINAL ALREADY ACTIVE");
+            Notify("TERMINAL ALREADY ACTIVE", TerminalMessageTone.Info);
             return;
         }
 
@@ -54,14 +69,14 @@ public class TerminalInteraction : MonoBehaviour
 
         if (!hasEvidence)
         {
-            ShowMessage("TERMINAL LOCKED - Collect evidence first.");
+            Notify("TERMINAL LOCKED - Collect evidence first.", TerminalMessageTone.Warning);
             return;
         }
 
         activated = true;
         GameManager.Instance?.ActivateTerminal();
         DisableLinkedCameras();
-        ShowMessage("TERMINAL ACCESS GRANTED - Security camera disabled.");
+        Notify("TERMINAL ACCESS GRANTED - Security camera disabled.", TerminalMessageTone.Success);
     }
 
     private void DisableLinkedCameras()
@@ -77,29 +92,22 @@ public class TerminalInteraction : MonoBehaviour
         }
     }
 
-    private void ShowMessage(string text)
+    // Updates the public, HUD-readable message state. Only called for
+    // meaningful one-shot outcomes (already-active / locked / granted),
+    // not the ambient "press E" proximity hint, which the HUD already
+    // shows continuously via its own bottom-bar prompt.
+    private void Notify(string text, TerminalMessageTone tone)
     {
-        message = text;
-        messageUntil = Time.time + 4f;
+        LastMessage = text;
+        LastMessageTone = tone;
+        LastMessageTime = Time.time;
         Debug.Log(text);
-    }
-
-    private void OnGUI()
-    {
-        if (Time.time > messageUntil || string.IsNullOrEmpty(message))
-            return;
-
-        GUI.Box(new Rect(Screen.width / 2f - 200, 30, 400, 50),
-                message);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Player"))
-        {
             playerNearby = true;
-            ShowMessage("Press E to access terminal");
-        }
     }
 
     private void OnTriggerExit2D(Collider2D other)

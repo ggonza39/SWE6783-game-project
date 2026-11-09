@@ -11,9 +11,19 @@ public static class TestUtils
 {
     public static void InvokeAwake(MonoBehaviour behaviour)
     {
-        MethodInfo awake = behaviour.GetType().GetMethod(
-            "Awake", BindingFlags.Instance | BindingFlags.NonPublic);
+        InvokeLifecycleMethod(behaviour, "Awake");
+    }
 
-        awake?.Invoke(behaviour, null);
+    public static void InvokeStart(MonoBehaviour behaviour)
+    {
+        InvokeLifecycleMethod(behaviour, "Start");
+    }
+
+    private static void InvokeLifecycleMethod(MonoBehaviour behaviour, string methodName)
+    {
+        MethodInfo method = behaviour.GetType().GetMethod(
+            methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+
+        method?.Invoke(behaviour, null);
     }
 }

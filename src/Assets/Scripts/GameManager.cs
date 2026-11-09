@@ -41,6 +41,16 @@ public class GameManager : MonoBehaviour
                EvidenceManager.Instance.HasEvidence(requiredAmount);
     }
 
+    /// <summary>
+    /// Single source of truth for "is extraction currently allowed". The
+    /// team's UX design requires the security terminal to be hacked in
+    /// addition to collecting the required evidence before extraction opens.
+    /// </summary>
+    public bool CanExtract(int requiredEvidence)
+    {
+        return HasRequiredEvidence(requiredEvidence) && TerminalActivated;
+    }
+
     /// <summary>Marks the mission's terminal objective as complete.</summary>
     public void ActivateTerminal()
     {
@@ -59,6 +69,9 @@ public class GameManager : MonoBehaviour
         GameEnded = true;
         PlayerWon = true;
 
+        //Records if the player won the game
+        GameplayMetrics.Instance?.EndSession("Won");
+
         Debug.Log("MISSION COMPLETE - Player escaped successfully!");
     }
 
@@ -70,21 +83,9 @@ public class GameManager : MonoBehaviour
         GameEnded = true;
         PlayerWon = false;
 
+        //Records if the player lost the game
+        GameplayMetrics.Instance?.EndSession("Lost");
+
         Debug.Log("MISSION FAILED - Player was detected!");
-    }
-
-    // Lightweight, always-on feedback so mission success/failure is visible
-    // during testing even before a full HUD exists. Intentionally minimal -
-    // polished HUD/menu presentation is handled separately.
-    private void OnGUI()
-    {
-        if (!GameEnded)
-            return;
-
-        string message = PlayerWon
-            ? "MISSION COMPLETE - You escaped with the evidence!"
-            : "MISSION FAILED - You were detected!";
-
-        GUI.Box(new Rect(Screen.width / 2f - 220, Screen.height / 2f - 25, 440, 50), message);
     }
 }

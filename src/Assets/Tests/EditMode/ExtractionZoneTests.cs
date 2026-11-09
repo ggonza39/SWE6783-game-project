@@ -54,9 +54,33 @@ public class ExtractionZoneTests
     }
 
     [Test]
-    public void PlayerEntersWithRequiredEvidence_WinsGame()
+    public void PlayerEntersWithEvidenceButNoTerminal_DoesNotWinGame()
+    {
+        // Extraction requires both evidence AND a hacked terminal (team UX
+        // requirement from the uxDemoPolish integration) - evidence alone
+        // must not be enough.
+        EvidenceManager.Instance.CollectEvidence(1);
+
+        EnterExtractionZone();
+
+        Assert.IsFalse(GameManager.Instance.GameEnded);
+    }
+
+    [Test]
+    public void PlayerEntersWithTerminalButNoEvidence_DoesNotWinGame()
+    {
+        GameManager.Instance.ActivateTerminal();
+
+        EnterExtractionZone();
+
+        Assert.IsFalse(GameManager.Instance.GameEnded);
+    }
+
+    [Test]
+    public void PlayerEntersWithEvidenceAndTerminal_WinsGame()
     {
         EvidenceManager.Instance.CollectEvidence(1);
+        GameManager.Instance.ActivateTerminal();
 
         EnterExtractionZone();
 

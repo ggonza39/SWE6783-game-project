@@ -20,16 +20,23 @@ public class ExtractionZone : MonoBehaviour
 
         // Routed through GameManager (rather than EvidenceManager directly)
         // so extraction requirements always stay in sync with the rest of
-        // the mission's objective state.
-        if (GameManager.Instance.HasRequiredEvidence(requiredEvidence))
+        // the mission's objective state. Extraction requires both the
+        // required evidence AND a hacked terminal (team UX requirement).
+        if (GameManager.Instance.CanExtract(requiredEvidence))
         {
             Debug.Log("Extraction successful!");
             GameManager.Instance.WinGame();
         }
-        else
+        else if (!GameManager.Instance.HasRequiredEvidence(requiredEvidence))
         {
             Debug.Log(
                 "Extraction locked. Collect the required evidence first."
+            );
+        }
+        else
+        {
+            Debug.Log(
+                "Extraction locked. Access the security terminal first."
             );
         }
     }
