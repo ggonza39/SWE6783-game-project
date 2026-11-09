@@ -7,6 +7,9 @@ public static class SecurityCameraSetup
 {
     static SecurityCameraSetup()
     {
+        if (Application.isBatchMode)
+            return;
+
         EditorApplication.delayCall += SetupCamera;
     }
 

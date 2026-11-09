@@ -12,7 +12,6 @@ public class UXHUDController : MonoBehaviour
     private GameObject terminal;
     private TerminalInteraction terminalInteraction;
     private GameObject extractionZone;
-    private Collider2D extractionCollider;
     private EvidenceCollectible[] evidenceItems;
 
     private Texture2D briefingTexture;
@@ -24,7 +23,16 @@ public class UXHUDController : MonoBehaviour
     private bool restartConfirmationVisible = false;
     private bool mainMenuConfirmationVisible = false;
     private bool restartOpenedFromPause = false;
-    private bool terminalAccessed = false;
+
+    // Edge-detection only, for showing a one-shot toast when the terminal
+    // becomes active. The actual activation state lives solely in
+    // GameManager (see TerminalAccessed below) so there is a single source
+    // of truth instead of a separately tracked flag here.
+    private bool lastTerminalActivatedForToast = false;
+    private float lastSeenTerminalMessageTime = -1f;
+
+    private bool TerminalAccessed =>
+        GameManager.Instance != null && GameManager.Instance.TerminalActivated;
 
     private string toastMessage = "";
     private float toastUntil = 0f;
@@ -71,7 +79,12 @@ public class UXHUDController : MonoBehaviour
         }
 
         instance = this;
-        DontDestroyOnLoad(gameObject);
+
+        // DontDestroyOnLoad only has meaning (and is only legal to call)
+        // in Play Mode/builds; guarding it keeps this component testable
+        // from EditMode tests without changing any runtime behavior.
+        if (Application.isPlaying)
+            DontDestroyOnLoad(gameObject);
         SceneManager.sceneLoaded += HandleSceneLoaded;
     }
 
@@ -116,14 +129,14 @@ public class UXHUDController : MonoBehaviour
         terminal = null;
         terminalInteraction = null;
         extractionZone = null;
-        extractionCollider = null;
         evidenceItems = null;
 
         helpVisible = false;
         restartConfirmationVisible = false;
         mainMenuConfirmationVisible = false;
         restartOpenedFromPause = false;
-        terminalAccessed = false;
+        lastTerminalActivatedForToast = false;
+        lastSeenTerminalMessageTime = -1f;
         toastMessage = "";
         toastUntil = 0f;
         toastBorder = cyanTex;
@@ -141,27 +154,15 @@ public class UXHUDController : MonoBehaviour
 
         if (terminal != null)
         {
+            // The UX layer owns on-screen prompts and toasts, but
+            // TerminalInteraction stays enabled - it is the sole authority
+            // for actually hacking the terminal and disabling cameras. We
+            // only read its public state here to drive our own messaging.
             terminalInteraction =
                 terminal.GetComponent<TerminalInteraction>();
-
-            // Our UX layer owns terminal prompts and feedback.
-            // Disable Elvin's temporary OnGUI popup so messages do not
-            // cover the center/top of the gameplay screen.
-            if (terminalInteraction != null)
-                terminalInteraction.enabled = false;
         }
 
         extractionZone = GameObject.Find("ExtractionZone");
-
-        if (extractionZone != null)
-        {
-            extractionCollider =
-                extractionZone.GetComponent<Collider2D>();
-
-            // The terminal must be accessed before extraction is enabled.
-            if (extractionCollider != null)
-                extractionCollider.enabled = false;
-        }
 
         evidenceItems =
             FindObjectsByType<EvidenceCollectible>(
@@ -285,7 +286,7 @@ public class UXHUDController : MonoBehaviour
         }
 
         UpdateEvidenceFeedback();
-        UpdateTerminalInteraction();
+        UpdateTerminalFeedback();
     }
 
     private void UpdateEvidenceFeedback()
@@ -320,60 +321,45 @@ public class UXHUDController : MonoBehaviour
         lastEvidenceCount = evidence;
     }
 
-    private void UpdateTerminalInteraction()
+    // Purely reactive: TerminalInteraction is the sole authority that
+    // decides WHEN and WHETHER a terminal hack succeeds (proximity, E key,
+    // evidence check, activating GameManager, disabling cameras). This
+    // method only reads that outcome to show a matching toast, so there is
+    // no duplicate input handling, no duplicate evidence/activation checks,
+    // and no second copy of "is the terminal active" state.
+    private void UpdateTerminalFeedback()
     {
-        if (player == null || terminal == null)
-            return;
+        bool activated = TerminalAccessed;
 
-        if (Vector2.Distance(
-                player.position,
-                terminal.transform.position
-            ) > 2f)
+        // The state-transition toast below already covers the success case
+        // with the latest wording (which also tells the player extraction is
+        // now reachable), so this is the single toast fired for that event -
+        // no separate "TERMINAL ACCESS GRANTED" toast follows it.
+        if (activated && !lastTerminalActivatedForToast)
         {
-            return;
+            ShowToast("EXIT UNLOCKED - REACH EXTRACTION", greenTex, 2.6f);
         }
 
-        if (!Input.GetKeyDown(KeyCode.E))
-            return;
+        lastTerminalActivatedForToast = activated;
 
-        //Records every E-key terminal attempts
-        GameplayMetrics.Instance?.RecordTerminalInteraction();
-
-        int evidence =
-            EvidenceManager.Instance != null
-            ? EvidenceManager.Instance.EvidenceCollected
-            : 0;
-
-        if (evidence < totalEvidence)
+        if (terminalInteraction != null &&
+            terminalInteraction.LastMessageTime > lastSeenTerminalMessageTime)
         {
-            ShowToast(
-                "TERMINAL LOCKED - COLLECT EVIDENCE",
-                redTex,
-                1.7f
-            );
-            return;
+            lastSeenTerminalMessageTime = terminalInteraction.LastMessageTime;
+
+            // The success case is already covered by the state-transition
+            // toast above; only relay the other outcomes (locked /
+            // already-active) here to avoid a duplicate toast for the same
+            // event.
+            if (terminalInteraction.LastMessageTone != TerminalMessageTone.Success)
+            {
+                Texture2D border = terminalInteraction.LastMessageTone == TerminalMessageTone.Warning
+                    ? redTex
+                    : greenTex;
+
+                ShowToast(terminalInteraction.LastMessage, border, 1.7f);
+            }
         }
-
-        if (terminalAccessed)
-        {
-            ShowToast(
-                "TERMINAL ALREADY ACCESSED",
-                greenTex,
-                1.2f
-            );
-            return;
-        }
-
-        terminalAccessed = true;
-
-        if (extractionCollider != null)
-            extractionCollider.enabled = true;
-
-        ShowToast(
-            "EXIT UNLOCKED - REACH EXTRACTION",
-            greenTex,
-            2.6f
-        );
     }
 
     private void OnGUI()
@@ -586,7 +572,7 @@ public class UXHUDController : MonoBehaviour
         {
             objective = "COLLECT THE EVIDENCE";
         }
-        else if (!terminalAccessed)
+        else if (!TerminalAccessed)
         {
             objective = "ACCESS SECURITY TERMINAL [E]";
         }
@@ -693,7 +679,7 @@ public class UXHUDController : MonoBehaviour
                         "TERMINAL LOCKED  -  COLLECT EVIDENCE";
                     border = redTex;
                 }
-                else if (terminalAccessed)
+                else if (TerminalAccessed)
                 {
                     message = "TERMINAL ACCESSED";
                     border = greenTex;
@@ -718,7 +704,7 @@ public class UXHUDController : MonoBehaviour
                         "EXTRACTION LOCKED  -  COLLECT EVIDENCE";
                     border = redTex;
                 }
-                else if (!terminalAccessed)
+                else if (!TerminalAccessed)
                 {
                     message =
                         "EXTRACTION LOCKED  -  ACCESS TERMINAL";

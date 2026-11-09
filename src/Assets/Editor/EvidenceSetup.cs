@@ -7,6 +7,9 @@ public static class EvidenceSetup
 {
     static EvidenceSetup()
     {
+        if (Application.isBatchMode)
+            return;
+
         EditorApplication.delayCall += SetupEvidenceSystem;
     }
 

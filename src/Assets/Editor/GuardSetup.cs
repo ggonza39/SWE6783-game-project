@@ -6,6 +6,11 @@ public static class GuardSetup
 {
     static GuardSetup()
     {
+        // Never auto-mutate the scene during batch-mode runs (CI builds,
+        // automated test execution); only run in the interactive Editor.
+        if (Application.isBatchMode)
+            return;
+
         EditorApplication.delayCall += SetupGuard;
     }
 

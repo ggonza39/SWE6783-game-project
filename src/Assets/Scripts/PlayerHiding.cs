@@ -2,13 +2,17 @@ using UnityEngine;
 
 public class PlayerHiding : MonoBehaviour
 {
-    public bool IsHidden { get; private set; }
+    // Tracks how many hiding-spot triggers currently overlap the player so
+    // leaving one spot doesn't break hiding while still standing in another.
+    private int overlappingHidingSpots;
+
+    public bool IsHidden => overlappingHidingSpots > 0;
 
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("HidingSpot"))
         {
-            IsHidden = true;
+            overlappingHidingSpots++;
 
             //Records if player is hidden
             GameplayMetrics.Instance?.RecordHiding();
@@ -21,8 +25,10 @@ public class PlayerHiding : MonoBehaviour
     {
         if (other.CompareTag("HidingSpot"))
         {
-            IsHidden = false;
-            Debug.Log("Player left hiding spot.");
+            overlappingHidingSpots = Mathf.Max(0, overlappingHidingSpots - 1);
+
+            if (overlappingHidingSpots == 0)
+                Debug.Log("Player left hiding spot.");
         }
     }
 }

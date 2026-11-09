@@ -44,7 +44,8 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        float speed = Input.GetKey(KeyCode.LeftShift)
+        bool sprinting = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        float speed = sprinting
             ? moveSpeed * sprintMultiplier
             : moveSpeed;
 
