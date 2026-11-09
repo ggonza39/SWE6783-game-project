@@ -299,12 +299,23 @@ public class UXHUDController : MonoBehaviour
 
         if (evidence > lastEvidenceCount)
         {
-            ShowToast(
-                "EVIDENCE ACQUIRED  " +
-                evidence + " / " + totalEvidence,
-                cyanTex,
-                1.6f
-            );
+            if (evidence >= totalEvidence)
+            {
+                ShowToast(
+                    "EVIDENCE COMPLETE - FIND TERMINAL",
+                    greenTex,
+                    2.4f
+                );
+            }
+            else
+            {
+                ShowToast(
+                    "EVIDENCE ACQUIRED  " +
+                    evidence + " / " + totalEvidence,
+                    cyanTex,
+                    1.6f
+                );
+            }
         }
 
         lastEvidenceCount = evidence;
@@ -320,9 +331,13 @@ public class UXHUDController : MonoBehaviour
     {
         bool activated = TerminalAccessed;
 
+        // The state-transition toast below already covers the success case
+        // with the latest wording (which also tells the player extraction is
+        // now reachable), so this is the single toast fired for that event -
+        // no separate "TERMINAL ACCESS GRANTED" toast follows it.
         if (activated && !lastTerminalActivatedForToast)
         {
-            ShowToast("TERMINAL ACCESS GRANTED", greenTex, 1.8f);
+            ShowToast("EXIT UNLOCKED - REACH EXTRACTION", greenTex, 2.6f);
         }
 
         lastTerminalActivatedForToast = activated;
@@ -332,9 +347,10 @@ public class UXHUDController : MonoBehaviour
         {
             lastSeenTerminalMessageTime = terminalInteraction.LastMessageTime;
 
-            // The "granted" case is already covered by the state-transition
-            // toast above; only relay the other outcomes here to avoid a
-            // duplicate toast for the same event.
+            // The success case is already covered by the state-transition
+            // toast above; only relay the other outcomes (locked /
+            // already-active) here to avoid a duplicate toast for the same
+            // event.
             if (terminalInteraction.LastMessageTone != TerminalMessageTone.Success)
             {
                 Texture2D border = terminalInteraction.LastMessageTone == TerminalMessageTone.Warning
@@ -647,7 +663,7 @@ public class UXHUDController : MonoBehaviour
             if (closestEvidenceDistance <= 2f)
             {
                 message =
-                    "EVIDENCE FOUND  -  MOVE CLOSER TO COLLECT";
+                    "EVIDENCE AHEAD - WALK OVER IT TO COLLECT";
                 border = cyanTex;
             }
 
@@ -696,7 +712,7 @@ public class UXHUDController : MonoBehaviour
                 }
                 else
                 {
-                    message = "EXTRACTION ZONE";
+                    message = "EXTRACTION READY - ENTER TO FINISH";
                     border = greenTex;
                 }
             }
@@ -705,7 +721,7 @@ public class UXHUDController : MonoBehaviour
         if (string.IsNullOrEmpty(message))
         {
             message =
-                "WASD / ARROWS  MOVE    SHIFT  SPRINT    E  INTERACT    R  RESTART    ESC  PAUSE / HELP";
+                "WASD / ARROWS MOVE    SHIFT SPRINT    E TERMINAL    R RESTART    ESC HELP";
             border = cyanTex;
         }
 
@@ -857,12 +873,12 @@ public class UXHUDController : MonoBehaviour
                 panel.width - 140,
                 220
             ),
-            "WASD / ARROW KEYS   Move\n\n" +
-            "SHIFT   Sprint\n\n" +
-            "E   Interact with terminal\n\n" +
-            "R   Request mission restart\n\n" +
-            "Enter hiding areas to conceal yourself\n\n" +
-            "Collect evidence, access the terminal, then extract",
+            "WASD / ARROWS   Move       SHIFT   Sprint\n\n" +
+            "Walk over evidence to collect it automatically\n\n" +
+            "After collecting evidence, press E near the terminal\n\n" +
+            "Enter the extraction zone after it unlocks\n\n" +
+            "Hide in designated areas to avoid detection\n\n" +
+            "R   Restart (confirm)       ESC   Pause / Resume",
             TextStyle(17, Color.white)
         );
 
@@ -1188,6 +1204,7 @@ public class UXHUDController : MonoBehaviour
         helpVisible = false;
         toastMessage = "";
         Time.timeScale = 1f;
+        ShowToast("COLLECT EVIDENCE - AVOID SECURITY", cyanTex, 3f);
 
         //Records when the player starts the mission
         GameplayMetrics.Instance?.StartSession();
