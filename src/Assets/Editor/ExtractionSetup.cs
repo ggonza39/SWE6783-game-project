@@ -7,6 +7,9 @@ public static class ExtractionSetup
 {
     static ExtractionSetup()
     {
+        if (Application.isBatchMode)
+            return;
+
         EditorApplication.delayCall += SetupExtractionSystem;
     }
 

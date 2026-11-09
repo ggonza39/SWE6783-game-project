@@ -8,7 +8,13 @@ using UnityEngine.InputSystem;
 public class TerminalInteraction : MonoBehaviour
 {
     [SerializeField] private int requiredEvidence = 1;
+
+    [Tooltip("Cameras this terminal disables once hacked. Leave empty to " +
+        "auto-disable every SecurityCamera currently in the scene.")]
+    [SerializeField] private SecurityCamera[] camerasToDisable;
+
     private bool playerNearby;
+    private bool activated;
     private string message = "";
     private float messageUntil;
 
@@ -31,15 +37,43 @@ public class TerminalInteraction : MonoBehaviour
 #endif
 
         if (pressed)
-        {
-            var manager = EvidenceManager.Instance;
+            TryActivate();
+    }
 
-            if (manager == null)
-                ShowMessage("Evidence Manager not found.");
-            else if (manager.HasEvidence(requiredEvidence))
-                ShowMessage("TERMINAL ACCESS GRANTED");
-            else
-                ShowMessage("TERMINAL LOCKED - Collect evidence first.");
+    private void TryActivate()
+    {
+        if (activated)
+        {
+            ShowMessage("TERMINAL ALREADY ACTIVE");
+            return;
+        }
+
+        bool hasEvidence = GameManager.Instance != null
+            ? GameManager.Instance.HasRequiredEvidence(requiredEvidence)
+            : EvidenceManager.Instance != null && EvidenceManager.Instance.HasEvidence(requiredEvidence);
+
+        if (!hasEvidence)
+        {
+            ShowMessage("TERMINAL LOCKED - Collect evidence first.");
+            return;
+        }
+
+        activated = true;
+        GameManager.Instance?.ActivateTerminal();
+        DisableLinkedCameras();
+        ShowMessage("TERMINAL ACCESS GRANTED - Security camera disabled.");
+    }
+
+    private void DisableLinkedCameras()
+    {
+        SecurityCamera[] targets = (camerasToDisable != null && camerasToDisable.Length > 0)
+            ? camerasToDisable
+            : FindObjectsByType<SecurityCamera>(FindObjectsSortMode.None);
+
+        foreach (SecurityCamera camera in targets)
+        {
+            if (camera != null)
+                camera.SetDisabled(true);
         }
     }
 

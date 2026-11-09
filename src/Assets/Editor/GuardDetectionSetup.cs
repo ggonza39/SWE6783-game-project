@@ -6,6 +6,9 @@ public static class GuardDetectionSetup
 {
     static GuardDetectionSetup()
     {
+        if (Application.isBatchMode)
+            return;
+
         EditorApplication.delayCall += SetupDetection;
     }
 

@@ -7,6 +7,9 @@ public static class HidingSetup
 {
     static HidingSetup()
     {
+        if (Application.isBatchMode)
+            return;
+
         EditorApplication.delayCall += SetupHiding;
     }
 

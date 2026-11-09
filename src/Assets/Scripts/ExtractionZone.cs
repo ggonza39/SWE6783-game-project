@@ -6,26 +6,25 @@ public class ExtractionZone : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (GameManager.Instance != null && GameManager.Instance.GameEnded)
+        if (GameManager.Instance == null)
+        {
+            Debug.LogWarning("GameManager not found.");
+            return;
+        }
+
+        if (GameManager.Instance.GameEnded)
             return;
 
         if (!other.CompareTag("Player"))
             return;
 
-        EvidenceManager evidenceManager = EvidenceManager.Instance;
-
-        if (evidenceManager == null)
-        {
-            Debug.LogWarning("Evidence Manager not found.");
-            return;
-        }
-
-        if (evidenceManager.HasEvidence(requiredEvidence))
+        // Routed through GameManager (rather than EvidenceManager directly)
+        // so extraction requirements always stay in sync with the rest of
+        // the mission's objective state.
+        if (GameManager.Instance.HasRequiredEvidence(requiredEvidence))
         {
             Debug.Log("Extraction successful!");
-
-            if (GameManager.Instance != null)
-                GameManager.Instance.WinGame();
+            GameManager.Instance.WinGame();
         }
         else
         {

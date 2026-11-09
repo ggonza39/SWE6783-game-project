@@ -1,15 +1,36 @@
 using UnityEngine;
 
-public class GuardDetection : MonoBehaviour
+public class GuardDetection : MonoBehaviour, IConeDetector
 {
     [SerializeField] private float detectionRange = 4f;
     [SerializeField] private float detectionAngle = 60f;
 
-        private Transform player;
+    /// <summary>True on any frame the player is currently visible to this guard.</summary>
+    public bool IsPlayerDetected { get; private set; }
+
+    private Transform player;
     private PlayerHiding playerHiding;
+    private GuardController guardController;
+    private readonly RaycastHit2D[] losHitBuffer = new RaycastHit2D[8];
+
+    // IConeDetector - drives the runtime-visible cone (DetectionConeRenderer)
+    // with the exact same values and forward direction used for detection.
+    public Vector2 ConeOrigin => transform.position;
+    public Vector2 ConeForward => guardController != null ? guardController.FacingDirection : (Vector2)transform.right;
+    public float ConeRange => detectionRange;
+    public float ConeFovAngle => detectionAngle;
+    public Color ConeColor => IsPlayerDetected ? new Color(1f, 0f, 0f, 0.35f) : new Color(1f, 0.5f, 0f, 0.25f);
+    public bool ConeActive => GameManager.Instance == null || !GameManager.Instance.GameEnded;
 
     private void Start()
     {
+        guardController = GetComponent<GuardController>();
+
+        DetectionConeRenderer coneRenderer = GetComponent<DetectionConeRenderer>();
+        if (coneRenderer == null)
+            coneRenderer = gameObject.AddComponent<DetectionConeRenderer>();
+        coneRenderer.Detector = this;
+
         // Safely attempt to find the player by tag
         GameObject playerObject = null;
         try 
@@ -38,6 +59,8 @@ public class GuardDetection : MonoBehaviour
 
     private void Update()
     {
+        IsPlayerDetected = false;
+
         // Detection only proceeds when GameManager exists and the game has not ended
         if (GameManager.Instance == null || GameManager.Instance.GameEnded)
             return;
@@ -49,30 +72,44 @@ public class GuardDetection : MonoBehaviour
         if (playerHiding != null && playerHiding.IsHidden)
             return;
 
-        Vector2 directionToPlayer =
-            (player.position - transform.position).normalized;
+        // Face the direction the guard is actually walking so the detection
+        // cone always matches its visible facing, even while patrolling left.
+        Vector2 forward = guardController != null
+            ? guardController.FacingDirection
+            : (Vector2)transform.right;
 
-        float distance =
-            Vector2.Distance(transform.position, player.position);
+        bool withinCone = DetectionUtility.IsWithinFieldOfView(
+            transform.position,
+            forward,
+            player.position,
+            detectionRange,
+            detectionAngle,
+            out _,
+            out _);
 
-        float angle =
-            Vector2.Angle(transform.right, directionToPlayer);
+        if (!withinCone)
+            return;
 
-        if (distance <= detectionRange &&
-            angle <= detectionAngle / 2f)
-        {
-            Debug.Log("Guard detected the player!");
-            GameManager.Instance.LoseGame();
-        }
+        // The player is inside the vision cone; make sure a wall isn't
+        // blocking the guard's line of sight before counting it as a spot.
+        if (!DetectionUtility.HasLineOfSight(transform.position, player.position, transform, losHitBuffer))
+            return;
+
+        IsPlayerDetected = true;
+        Debug.Log("Guard detected the player!");
+        GameManager.Instance.LoseGame();
     }
 
     private void OnDrawGizmos()
     {
-        Gizmos.color = Color.red;
+        Gizmos.color = IsPlayerDetected ? Color.red : new Color(1f, 0.5f, 0f);
         Gizmos.DrawWireSphere(transform.position, detectionRange);
 
-        // Visualize detection cone
-        Vector3 forward = transform.right;
+        // Visualize detection cone using the same forward direction detection uses.
+        Vector3 forward = Application.isPlaying && guardController != null
+            ? (Vector3)guardController.FacingDirection
+            : transform.right;
+
         Vector3 leftBoundary = Quaternion.Euler(0, 0, detectionAngle / 2f) * forward;
         Vector3 rightBoundary = Quaternion.Euler(0, 0, -detectionAngle / 2f) * forward;
 
