@@ -22,6 +22,8 @@ public class TerminalInteraction : MonoBehaviour
 
     private bool playerNearby;
     private bool activated;
+    public bool PlayerNearby => playerNearby;
+    public bool IsActivated => activated;
 
     // Terminal hacking logic lives here; on-screen presentation (toasts,
     // prompts, the HUD) is owned by UXHUDController, which reads these
@@ -32,7 +34,8 @@ public class TerminalInteraction : MonoBehaviour
 
     private void Update()
     {
-        if (!playerNearby) return;
+        if (GetComponent<UXExpandedInteraction>() != null) return;
+        if (Time.timeScale <= 0f || !playerNearby) return;
 
         if (GameManager.Instance != null &&
             GameManager.Instance.GameEnded) return;
@@ -77,6 +80,12 @@ public class TerminalInteraction : MonoBehaviour
         GameManager.Instance?.ActivateTerminal();
         DisableLinkedCameras();
         Notify("TERMINAL ACCESS GRANTED - Security camera disabled.", TerminalMessageTone.Success);
+    }
+
+    public void ActivateFromDownload()
+    {
+        if (Time.timeScale > 0f && playerNearby &&
+            (GameManager.Instance == null || !GameManager.Instance.GameEnded)) TryActivate();
     }
 
     private void DisableLinkedCameras()

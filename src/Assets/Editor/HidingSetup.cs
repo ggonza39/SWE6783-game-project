@@ -15,6 +15,11 @@ public static class HidingSetup
 
     private static void SetupHiding()
     {
+        // The authored demo already contains its complete gameplay setup.
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().path ==
+            "Assets/Scenes/UXFacilityExpanded.unity")
+            return;
+
         if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
             return;
 

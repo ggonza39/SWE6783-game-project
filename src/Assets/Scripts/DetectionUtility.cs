@@ -35,13 +35,14 @@ public static class DetectionUtility
     /// <summary>
     /// Casts a ray from <paramref name="origin"/> toward <paramref name="targetPosition"/>
     /// and returns true only if no solid (non-trigger) collider blocks the path,
-    /// ignoring the detector's own collider so guards/cameras don't self-obstruct.
+    /// ignoring colliders on the detector and the optional target.
     /// </summary>
     public static bool HasLineOfSight(
         Vector2 origin,
         Vector2 targetPosition,
         Transform self,
-        RaycastHit2D[] hitBuffer)
+        RaycastHit2D[] hitBuffer,
+        Transform target = null)
     {
         Vector2 offset = targetPosition - origin;
         float distance = offset.magnitude;
@@ -49,19 +50,44 @@ public static class DetectionUtility
         if (distance <= Mathf.Epsilon)
             return true;
 
-        Vector2 direction = offset / distance;
-        int hitCount = Physics2D.RaycastNonAlloc(origin, direction, hitBuffer, distance);
+        return GetSightDistance(origin, offset / distance, distance, self, hitBuffer, target) >= distance;
+    }
+
+    /// <summary>Returns the distance to the nearest solid sight blocker.</summary>
+    public static float GetSightDistance(
+        Vector2 origin,
+        Vector2 direction,
+        float range,
+        Transform self,
+        RaycastHit2D[] hitBuffer,
+        Transform target = null)
+    {
+        int hitCount = Physics2D.RaycastNonAlloc(origin, direction, hitBuffer, range);
+        RaycastHit2D[] hits = hitBuffer;
+
+        // A full buffer may omit a wall behind several trigger colliders.
+        if (hitCount == hitBuffer.Length)
+        {
+            hits = Physics2D.RaycastAll(origin, direction, range);
+            hitCount = hits.Length;
+        }
+
+        float visibleDistance = range;
 
         for (int i = 0; i < hitCount; i++)
         {
-            Collider2D hitCollider = hitBuffer[i].collider;
+            Collider2D hitCollider = hits[i].collider;
 
             if (hitCollider == null)
                 continue;
 
             // Ignore the detector's own collider (raycasts can register a hit
             // at the origin when it starts inside its own collider bounds).
-            if (self != null && hitCollider.transform == self)
+            if (self != null && hitCollider.transform.IsChildOf(self))
+                continue;
+
+            // The ray reaches the player's collider before its center.
+            if (target != null && hitCollider.transform.IsChildOf(target))
                 continue;
 
             // Triggers (hiding spots, evidence, terminals, extraction zone)
@@ -69,9 +95,9 @@ public static class DetectionUtility
             if (hitCollider.isTrigger)
                 continue;
 
-            return false;
+            visibleDistance = Mathf.Min(visibleDistance, hits[i].distance);
         }
 
-        return true;
+        return visibleDistance;
     }
 }

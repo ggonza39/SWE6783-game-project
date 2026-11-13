@@ -16,6 +16,11 @@ public static class GuardSetup
 
     private static void SetupGuard()
     {
+        // The authored demo already contains its complete gameplay setup.
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().path ==
+            "Assets/Scenes/UXFacilityExpanded.unity")
+            return;
+
         if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
             return;
 

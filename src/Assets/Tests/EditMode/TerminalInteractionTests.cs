@@ -45,6 +45,25 @@ public class TerminalInteractionTests
     }
 
     [Test]
+    public void TwoEvidenceMission_StaysLockedUntilBothPickups()
+    {
+        TerminalInteraction terminal = terminalObject.GetComponent<TerminalInteraction>();
+        typeof(TerminalInteraction).GetField(
+            "requiredEvidence", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(terminal, 2);
+
+        EvidenceManager.Instance.CollectEvidence(1);
+        Activate();
+        Assert.IsFalse(GameManager.Instance.TerminalActivated);
+        Assert.IsFalse(cameraObject.GetComponent<SecurityCamera>().IsDisabled);
+
+        EvidenceManager.Instance.CollectEvidence(1);
+        Activate();
+        Assert.IsTrue(GameManager.Instance.TerminalActivated);
+        Assert.IsTrue(cameraObject.GetComponent<SecurityCamera>().IsDisabled);
+        Assert.IsTrue(GameManager.Instance.CanExtract(2));
+    }
+
+    [Test]
     public void TryActivate_WithoutEvidence_DoesNotActivate()
     {
         Activate();
