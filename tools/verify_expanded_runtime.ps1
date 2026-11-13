@@ -4,7 +4,8 @@ $ErrorActionPreference = 'Stop'
 $prRepository = Split-Path -Parent $PSScriptRoot
 $prSource = Join-Path $prRepository 'src/Assets/Scripts'
 $prFiles = @((Join-Path $PSScriptRoot 'verification/UnityVerificationStubs.cs'),
-    (Join-Path $PSScriptRoot 'verification/ExpandedRuntimeChecks.cs'))
+    (Join-Path $PSScriptRoot 'verification/ExpandedRuntimeChecks.cs'),
+    (Join-Path $PSScriptRoot 'verification/SolidHidingChecks.cs'))
 $prFiles += Get-ChildItem -LiteralPath $prSource -Filter '*.cs' -File |
     Where-Object { $_.BaseName -ne 'DetectionConeRenderer' } | ForEach-Object { $_.FullName }
 Add-Type -Path $prFiles -IgnoreWarnings -ErrorAction Stop
@@ -17,6 +18,11 @@ foreach ($prWall in $prGeometry.walls) {
 }
 [ExpandedRuntimeChecks]::NavigationReturns([float[]]$prBoxes)
 Write-Output 'PASS isolated pursuit and return across the saved facility geometry.'
+$prRoutes = @()
+foreach ($prRoute in $prGeometry.routes) {
+    foreach ($prPoint in $prRoute) { $prRoutes += @($prPoint[0], $prPoint[1]) }
+}
+Write-Output ('PASS isolated solid cover and guard movement: ' + [SolidHidingChecks]::Run([float[]]$prBoxes, [float[]]$prRoutes))
 [UnityEngine.Object]::All.Clear()
 foreach ($prWall in $prGeometry.walls) {
     $prGo = [UnityEngine.GameObject]::new($(if ($prWall.name -eq 'gate') { 'AccessGate' } else { 'Wall' }))

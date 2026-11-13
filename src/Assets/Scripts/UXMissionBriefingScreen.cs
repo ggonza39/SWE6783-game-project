@@ -115,7 +115,7 @@ public sealed class UXMissionBriefingScreen
             expanded ? "Hold E at 3 data caches (2.5s each).\nThen hold E at the terminal (4s)." :
             "With all data, approach the terminal.\nPress E to hack security.", Cyan);
         DrawObjective(new Rect(848f, 486f, 384f, 122f), "03", "REACH EXTRACTION",
-            expanded ? "Green exit: service route or east flank.\nBreak sight, hide, let search clear." :
+            expanded ? "Green exit: service route or east flank.\nWalk into blue bays; green HIDDEN confirms cover." :
             "Head for the green exit.\nAll objectives must be complete.", Green);
 
         DrawControls();

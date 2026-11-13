@@ -55,11 +55,19 @@ data=json.loads((ROOT/'tools/expanded_level_geometry.json').read_text())
 assert len(walls)==len(data['walls'])
 for a,b in zip(sorted(walls,key=lambda x:(x['x'],x['y'])), sorted(data['walls'],key=lambda x:(x['x'],x['y']))):
     for key in ['x','y','w','h']:assert abs(a[key]-b[key])<1e-6,(a,b)
+# The director turns the saved hiding triggers into solid crates at runtime.
+# Validate the playable geometry with those bodies present as well.
+runtime_walls=list(walls)
+for go,body in objects.items():
+    if val(body,'m_TagString')!='HidingSpot':continue
+    pos,_=world(by_object[go])
+    runtime_walls.append(dict(name='hiding_cover',x=pos[0],y=pos[1],w=.98,h=.98))
+assert len(runtime_walls)-len(walls)==9
 points=[(x/2,y/2) for y in range(-15,16) for x in range(-27,28)]
 def free(p, opened, half=(.25,.35)):
     return not any(abs(p[0]-b['x']) <= b['w']/2+half[0] and
                    abs(p[1]-b['y']) <= b['h']/2+half[1]
-                   for b in walls if not(opened and b['name']=='gate'))
+                   for b in runtime_walls if not(opened and b['name']=='gate'))
 def path(a,b,opened,half=(.25,.35)):
     allowed={p for p in points if free(p,opened,half)}
     start=min(allowed,key=lambda p:math.dist(p,a));goal=min(allowed,key=lambda p:math.dist(p,b))
@@ -84,9 +92,7 @@ for p in data['passages']:
 for number,route in enumerate(data['routes']):
     for a,b in zip(route,route[1:]+route[:1]):
         assert a[0]==b[0] or a[1]==b[1]
-        for i in range(201):
-            p=(a[0]+(b[0]-a[0])*i/200,a[1]+(b[1]-a[1])*i/200)
-            assert free(p,False,(.13,.13)),('Guard patrol crosses solid geometry',number,a,b)
+        assert path(a,b,False,(.28,.38)),('Guard cannot route around solid cover',number,a,b)
 # Extraction annex is bounded on four sides and has exactly two two-tile entrances.
 annex_west={p for p in points if p[0]==8 and -7<=p[1]<=-2 and free(p,True)}
 annex_north={p for p in points if p[1]==-2 and 8<=p[0]<=13 and free(p,True)}
@@ -98,5 +104,5 @@ for sequence in itertools.permutations(data['data']):
     goals=[data['spawn'],data['key'],*sequence,data['terminal'],data['exit']]
     best=min(best,sum((len(path(a,b,True))-1)*.5 for a,b in zip(goals,goals[1:])))
 print('PASS: scene references; 3 guards/cameras/caches; mandatory key gate; all objectives/passages reachable;')
-print('      patrol and pursuit clearance; exactly two extraction entrances.')
+print('      9 runtime solid hiding crates; patrol/pursuit routes around cover; exactly two extraction entrances.')
 print('Shortest geometric mission route:',best,'world units (excludes security timing and downloads).')

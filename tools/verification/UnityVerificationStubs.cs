@@ -29,6 +29,7 @@ public class GameObject:Object {
  public GameObject(string name){this.name=name;transform=new Transform{gameObject=this};components[typeof(Transform)]=transform;}
  public T AddComponent<T>() where T:Component,new(){var c=new T{gameObject=this};components[typeof(T)]=c;return c;}
  public T GetComponent<T>() where T:Component {foreach(var c in components.Values)if(c is T)return c as T;return null;}
+ public T GetComponentInParent<T>() where T:Component=>transform.GetComponentInParent<T>();
  public static GameObject Find(string s)=>All.Find(x=>x is GameObject g&&g.name==s&&g.activeSelf) as GameObject;
  public static GameObject FindWithTag(string s)=>All.Find(x=>x is GameObject g&&g.tag==s&&g.activeSelf) as GameObject;
  public static GameObject[] FindGameObjectsWithTag(string s)=>All.FindAll(x=>x is GameObject g&&g.tag==s&&g.activeSelf).ConvertAll(x=>(GameObject)x).ToArray();
@@ -36,7 +37,7 @@ public class GameObject:Object {
 }
 public class Transform:Component {
  public Transform parent;public Vector3 localPosition;public Vector3 localScale=Vector3.one;public Quaternion rotation=Quaternion.identity;
- public Vector3 position {get=>parent==null?localPosition:parent.position+localPosition;set=>localPosition=value;}
+ public Vector3 position {get=>parent==null?localPosition:parent.position+localPosition;set=>localPosition=parent==null?value:value-parent.position;}
  public Vector3 lossyScale=>parent==null?localScale:new Vector3(parent.lossyScale.x*localScale.x,parent.lossyScale.y*localScale.y,1);
  public Vector3 eulerAngles=>new Vector3(0,0,rotation.angle); public Vector3 right=>rotation*Vector3.right;
  public void SetParent(Transform p,bool world=false){parent=p;}public Transform Find(string s)=>Object.All.Find(x=>x is Transform t&&t.parent==this&&t.gameObject.name==s) as Transform;
@@ -75,7 +76,12 @@ public class Collider2D:Component {public bool enabled=true,isTrigger;}
 public class BoxCollider2D:Collider2D {public Vector2 size=new Vector2(1,1),offset;public Bounds bounds=>new Bounds(transform.position,new Vector3(Math.Abs(size.x*transform.lossyScale.x),Math.Abs(size.y*transform.lossyScale.y)));}
 public class Rigidbody2D:Component {public float gravityScale;public bool freezeRotation;public Vector2 linearVelocity;}
 public struct RaycastHit2D {public Collider2D collider;public float distance;}
-public static class Physics2D {public static void SyncTransforms(){} public static int RaycastNonAlloc(Vector2 p,Vector2 d,RaycastHit2D[] b,float r)=>0;public static RaycastHit2D[] RaycastAll(Vector2 p,Vector2 d,float r)=>new RaycastHit2D[0];}
+public static class Physics2D {
+ public static HashSet<(Collider2D,Collider2D)> Ignored=new HashSet<(Collider2D,Collider2D)>();
+ public static void SyncTransforms(){} public static void IgnoreCollision(Collider2D a,Collider2D b,bool ignore){if(ignore)Ignored.Add((a,b));else{Ignored.Remove((a,b));Ignored.Remove((b,a));}}
+ public static bool GetIgnoreCollision(Collider2D a,Collider2D b)=>Ignored.Contains((a,b))||Ignored.Contains((b,a));
+ public static int RaycastNonAlloc(Vector2 p,Vector2 d,RaycastHit2D[] b,float r)=>0;public static RaycastHit2D[] RaycastAll(Vector2 p,Vector2 d,float r)=>new RaycastHit2D[0];
+}
 public struct Color {
  public float r,g,b,a;public Color(float r,float g,float b,float a=1){this.r=r;this.g=g;this.b=b;this.a=a;}
  public static Color green=>new Color(0,1,0);public static Color blue=>new Color(0,0,1);public static Color white=>new Color(1,1,1);public static Color red=>new Color(1,0,0);public static Color yellow=>new Color(1,1,0);public static Color cyan=>new Color(0,1,1);public static Color gray=>new Color(.5f,.5f,.5f);

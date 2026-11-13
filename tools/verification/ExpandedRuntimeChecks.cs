@@ -91,13 +91,14 @@ public static class ExpandedRuntimeChecks
         var response = guard.GetComponent<UXGuardResponse>(); Call(response, "Start");
         director.State.Tick(2f, true, false, false);
         Time.timeScale = 1f; Time.deltaTime = .05f;
-        for (int i = 0; i < 3000 && Vector2.Distance(guard.transform.position, new Vector2(12,3)) > .4f; i++)
+        for (int i = 0; i < 3000 && Vector2.Distance(guard.transform.position, new Vector2(12,3)) > 1.2f; i++)
         {
             Vector2 previous = guard.transform.position;
             Time.time += Time.deltaTime; Call(response, "Update");
             Check(director.ClearNavigationSegment(previous, guard.transform.position), "Pursuit cut through a wall");
         }
-        Check(Vector2.Distance(guard.transform.position, new Vector2(12,3)) <= .4f, "Pursuit never reached last known position");
+        Check(Vector2.Distance(guard.transform.position, new Vector2(12,3)) <= 1.2f,
+            "Pursuit never reached a safe stand-off from the occupied last known position");
         director.State.Tick(20f, false, false, true);
         for (int i = 0; i < 3000 && !patrol.enabled; i++)
         {

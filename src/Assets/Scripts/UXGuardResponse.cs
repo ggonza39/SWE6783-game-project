@@ -82,13 +82,17 @@ public sealed class UXGuardResponse : MonoBehaviour
         {
             aimTime = 0f;
             Navigate(patrolAnchor, 1.25f);
-            if (Vector2.Distance(transform.position, patrolAnchor) < 0.12f)
+            bool anchorReached = Vector2.Distance(transform.position, patrolAnchor) < 0.12f;
+            bool anchorOccupied = !director.CanGuardTravel(patrolAnchor, patrolAnchor) &&
+                path.Count > 0 && pathStep >= path.Count;
+            if (anchorReached || anchorOccupied)
             {
-                // Finish on the original patrol segment before resuming its stored target.
-                transform.position = new Vector3(patrolAnchor.x, patrolAnchor.y, transform.position.z);
+                // Resume from a safe nearby point if the player is now at the old anchor.
+                // Never snap a returning guard into a body or solid cover.
+                if (anchorReached) director.TryMoveGuard(transform, patrolAnchor);
                 transform.rotation = patrolRotation;
                 responding = false;
-                if (patrol != null) patrol.enabled = true;
+                if (patrol != null) { patrol.ResumeAtCurrentPosition(); patrol.enabled = true; }
             }
         }
     }
@@ -105,10 +109,10 @@ public sealed class UXGuardResponse : MonoBehaviour
         {
             if (!director.State.Responding && path.Count > 0 &&
                 Vector2.Distance(transform.position, target) < 0.45f &&
-                director.ClearNavigationSegment(transform.position, target))
+                director.CanGuardTravel(transform.position, target))
             {
                 Vector2 finish = Vector2.MoveTowards(transform.position, target, speed * Time.deltaTime);
-                transform.position = new Vector3(finish.x, finish.y, transform.position.z);
+                director.TryMoveGuard(transform, finish);
             }
             return;
         }
@@ -117,7 +121,7 @@ public sealed class UXGuardResponse : MonoBehaviour
         // Face first: predictable turns provide a useful stealth window.
         if (Vector2.Angle(transform.right, heading) > 30f) return;
         Vector2 next = Vector2.MoveTowards(transform.position, path[pathStep], speed * Time.deltaTime);
-        transform.position = new Vector3(next.x, next.y, transform.position.z);
+        if (!director.TryMoveGuard(transform, next)) repathAt = 0f;
     }
 
     private void Turn(Vector2 direction, float degreesPerSecond)

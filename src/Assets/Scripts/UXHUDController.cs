@@ -805,10 +805,13 @@ public class UXHUDController : MonoBehaviour
             Vector2.Distance(player.position, UXStealthDirector.Instance.GatePosition) < 6f)
             DrawObjectMarker(camera, UXStealthDirector.Instance.GatePosition, "OPEN", greenTex);
 
-        // Nearby hiding zones are optional cues, not a new mechanic.
-        if (player == null || hidingSpots == null ||
-            (playerHiding != null && playerHiding.IsHidden))
+        if (player == null || hidingSpots == null) return;
+        if (ExpandedFacility && playerHiding != null && playerHiding.IsHidden)
+        {
+            DrawObjectMarker(camera, player.position + new Vector3(0f, .35f, 0f), "HIDDEN", greenTex);
             return;
+        }
+        if (playerHiding != null && playerHiding.IsHidden) return;
 
         foreach (GameObject spot in hidingSpots)
         {
@@ -816,7 +819,7 @@ public class UXHUDController : MonoBehaviour
                 Vector2.Distance(player.position, spot.transform.position) <= 1.8f)
             {
                 DrawObjectMarker(camera, spot.transform.position,
-                    "HIDE", cyanTex);
+                    ExpandedFacility ? "HIDE BAY" : "HIDE", cyanTex);
             }
         }
     }
@@ -832,9 +835,9 @@ public class UXHUDController : MonoBehaviour
         string compactLabel = label == "EVIDENCE" ? "DATA" :
             label == "TERMINAL [E]" ? (terminalInteraction != null && terminalInteraction.PlayerNearby ? "USE E" : "TERM") :
             label == "EXTRACTION" ? "EXIT" :
-            (label == "KEY" || label == "LOCKED" || label == "OPEN" ? label : "HIDE");
+            (label == "KEY" || label == "LOCKED" || label == "OPEN" || label == "HIDDEN" || label == "HIDE BAY" ? label : "HIDE");
         float s = Mathf.Min(GetHudScale(), 1.25f);
-        float width = 66f * s;
+        float width = (label == "HIDDEN" || label == "HIDE BAY" ? 94f : 66f) * s;
         float height = 22f * s;
         float minY = GetTopBarHeight() + 5f;
         float maxY = Screen.height - GetBottomBarHeight() - height - 5f;
@@ -850,7 +853,7 @@ public class UXHUDController : MonoBehaviour
         DrawPanel(marker, darkTex, border);
         GUI.Label(new Rect(x + 5f * s, y + 2f * s,
             width - 10f * s, height - 4f * s), compactLabel,
-            CenterStyle(Mathf.RoundToInt(12f * s), Color.white));
+            CenterStyle(Mathf.RoundToInt(12f * s), label == "HIDDEN" ? new Color(.45f, 1f, .65f) : Color.white));
     }
     private void DrawToast()
     {
@@ -977,7 +980,7 @@ public class UXHUDController : MonoBehaviour
             "2   Hold E at 3 data caches (2.5s), then the terminal (4s).\n\n" +
             "3   Extract through the service route or the east flank.\n\n" +
             "RED: pursuit. Break sight and hide. YELLOW: searching.\n" +
-            "Health does not regenerate; marked blue cover conceals you.\n\n" +
+            "Walk into an open blue bay. Green HIDDEN confirms cover.\n\n" +
             "WASD move crouched   C / CTRL slow   SHIFT sprint\n" +
             "TAB map   R restart (confirm)   ESC resume";
 

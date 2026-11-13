@@ -25,6 +25,9 @@ public sealed class UXPreviewGuardFacingPatrol : MonoBehaviour
     private float turnTime;
     private float turnFrom;
     private float turnTo;
+    private List<Vector2> navigationPath = new List<Vector2>();
+    private int navigationStep;
+    private float repathAt;
 
     private void Awake()
     {
@@ -83,6 +86,9 @@ public sealed class UXPreviewGuardFacingPatrol : MonoBehaviour
             (GameManager.Instance != null && GameManager.Instance.GameEnded))
             return;
 
+        UXStealthDirector director = UXStealthDirector.Owns(gameObject) ? UXStealthDirector.Instance : null;
+        if (director != null && director.State.Responding) return;
+
         if (pauseRemaining > 0f)
         {
             pauseRemaining -= Time.deltaTime;
@@ -101,6 +107,12 @@ public sealed class UXPreviewGuardFacingPatrol : MonoBehaviour
             return;
         }
 
+        if (director != null)
+        {
+            FollowNavigableRoute(director);
+            return;
+        }
+
         Vector3 destination = new Vector3(
             routePoints[targetPoint].x, routePoints[targetPoint].y, worldZ);
         transform.position = Vector3.MoveTowards(
@@ -108,6 +120,58 @@ public sealed class UXPreviewGuardFacingPatrol : MonoBehaviour
 
         if ((transform.position - destination).sqrMagnitude < 0.0001f)
             ChooseNextPoint();
+    }
+
+    private void FollowNavigableRoute(UXStealthDirector director)
+    {
+        Vector2 destination = routePoints[targetPoint];
+        if (Time.time >= repathAt)
+        {
+            navigationPath = director.Path(transform.position, destination);
+            navigationStep = 0;
+            repathAt = Time.time + 0.65f;
+        }
+        while (navigationStep < navigationPath.Count &&
+            Vector2.Distance(transform.position, navigationPath[navigationStep]) < 0.045f) navigationStep++;
+        if (navigationStep >= navigationPath.Count)
+        {
+            if (Vector2.Distance(transform.position, destination) < 0.045f ||
+                (navigationPath.Count > 0 && !director.CanGuardTravel(destination, destination)))
+            {
+                // A player occupying a waypoint is an obstacle, not someone to push aside.
+                ChooseNextPoint();
+                return;
+            }
+            if (navigationPath.Count == 0 || !director.CanGuardTravel(transform.position, destination)) return;
+        }
+        Vector2 nextPoint = navigationStep < navigationPath.Count ? navigationPath[navigationStep] : destination;
+        Vector2 heading = nextPoint - (Vector2)transform.position;
+        float angle = Mathf.Atan2(heading.y, heading.x) * Mathf.Rad2Deg;
+        transform.rotation = Quaternion.Euler(0f, 0f,
+            Mathf.MoveTowardsAngle(transform.eulerAngles.z, angle, 190f * Time.deltaTime));
+        if (Vector2.Angle(transform.right, heading) > 30f) return;
+        Vector2 next = Vector2.MoveTowards(transform.position, nextPoint, Mathf.Max(0f, speed) * Time.deltaTime);
+        if (!director.TryMoveGuard(transform, next)) repathAt = 0f;
+    }
+
+    public void ResumeAtCurrentPosition()
+    {
+        navigationPath.Clear(); navigationStep = 0; repathAt = 0f;
+        turning = false; pauseRemaining = 0f;
+    }
+
+    public float DistanceToRoute(Vector2 point)
+    {
+        float closest = Vector2.Distance(point, transform.position);
+        foreach (Vector2Int edge in routeEdges)
+        {
+            if (edge.x < 0 || edge.y < 0 || edge.x >= routePoints.Length || edge.y >= routePoints.Length) continue;
+            Vector2 from = routePoints[edge.x], segment = routePoints[edge.y] - from;
+            float t = segment.sqrMagnitude > 0f ? Mathf.Clamp01(
+                ((point.x - from.x) * segment.x + (point.y - from.y) * segment.y) / segment.sqrMagnitude) : 0f;
+            closest = Mathf.Min(closest, Vector2.Distance(point, from + segment * t));
+        }
+        return closest;
     }
 
     private void ChooseNextPoint()
@@ -147,6 +211,7 @@ public sealed class UXPreviewGuardFacingPatrol : MonoBehaviour
 
         previousPoint = reached;
         targetPoint = next;
+        navigationPath.Clear(); navigationStep = 0; repathAt = 0f;
         Vector2 heading = routePoints[next] - routePoints[reached];
         turnFrom = transform.eulerAngles.z;
         turnTo = Mathf.Atan2(heading.y, heading.x) * Mathf.Rad2Deg;
