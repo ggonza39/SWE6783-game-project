@@ -93,6 +93,16 @@ public class PlayerSpriteSetup : AssetPostprocessor
             return false;
         }
 
+        // The Deluxe preview owns its art scale and narrow-passage hitbox.
+        // Applying the legacy sprite here would resize and auto-save that body.
+        if (player.scene.path == "Assets/Scenes/UXFacilityPreview.unity" ||
+            player.scene.path == "Assets/Scenes/UXFacilityExpanded.unity")
+        {
+            if (verbose)
+                Debug.Log("The facility preview uses its own Deluxe player setup.");
+            return false;
+        }
+
         SpriteRenderer renderer =
             player.GetComponent<SpriteRenderer>();
 

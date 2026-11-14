@@ -20,6 +20,11 @@ public static class WallColliderSetup
     [MenuItem("Pixel Rebellion/Setup Wall Colliders")]
     public static void SetupWallColliders()
     {
+        // The authored demo already contains its complete gameplay setup.
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().path ==
+            "Assets/Scenes/UXFacilityExpanded.unity")
+            return;
+
         if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
             return;
 

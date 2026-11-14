@@ -1,5 +1,18 @@
 # SWE6783-game-project: Pixel Rebellion — Shadow Protocol
 
+## Expanded Level 1 demo candidate — November 12, 2026
+
+Open `src` with **Unity 6000.2.2f1**, then open
+`Assets/Scenes/UXFacilityExpanded.unity` and select **Play → Deploy**.
+
+- **Mission:** collect the gold keycard, download three evidence caches, hack the terminal, then extract.
+- **Controls:** WASD/arrows move crouched; C/CTRL extra slow; SHIFT sprint; hold E to download/hack; hold TAB for the blueprint; ESC pause; R restart confirmation.
+- **Security:** marked cover conceals the player. Full detection starts pursuit; breaking sight and hiding lets search clear. Health does not regenerate.
+- **Status:** a Windows Unity playtest completed the mission. Pursuit/damage recovery and Windows/macOS standalone builds still require focused validation before submission.
+
+See [the demo handoff and recording plan](docs/UX_EXPANDED_LEVEL1_DEMO.md) for the
+verified behavior, remaining checks and team review responsibilities.
+
 ## Team Name
 - Pixel Rebellion
 

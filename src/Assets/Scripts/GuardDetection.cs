@@ -16,7 +16,9 @@ public class GuardDetection : MonoBehaviour, IConeDetector
     // IConeDetector - drives the runtime-visible cone (DetectionConeRenderer)
     // with the exact same values and forward direction used for detection.
     public Vector2 ConeOrigin => transform.position;
-    public Vector2 ConeForward => guardController != null ? guardController.FacingDirection : (Vector2)transform.right;
+    public Vector2 ConeForward => guardController != null && guardController.enabled
+        ? guardController.FacingDirection
+        : (Vector2)transform.right;
     public float ConeRange => detectionRange;
     public float ConeFovAngle => detectionAngle;
     public Color ConeColor => IsPlayerDetected ? new Color(1f, 0f, 0f, 0.35f) : new Color(1f, 0.5f, 0f, 0.25f);
@@ -62,7 +64,7 @@ public class GuardDetection : MonoBehaviour, IConeDetector
         IsPlayerDetected = false;
 
         // Detection only proceeds when GameManager exists and the game has not ended
-        if (GameManager.Instance == null || GameManager.Instance.GameEnded)
+        if (Time.timeScale <= 0f || GameManager.Instance == null || GameManager.Instance.GameEnded)
             return;
 
         if (player == null)
@@ -74,9 +76,7 @@ public class GuardDetection : MonoBehaviour, IConeDetector
 
         // Face the direction the guard is actually walking so the detection
         // cone always matches its visible facing, even while patrolling left.
-        Vector2 forward = guardController != null
-            ? guardController.FacingDirection
-            : (Vector2)transform.right;
+        Vector2 forward = ConeForward;
 
         bool withinCone = DetectionUtility.IsWithinFieldOfView(
             transform.position,
@@ -92,10 +92,11 @@ public class GuardDetection : MonoBehaviour, IConeDetector
 
         // The player is inside the vision cone; make sure a wall isn't
         // blocking the guard's line of sight before counting it as a spot.
-        if (!DetectionUtility.HasLineOfSight(transform.position, player.position, transform, losHitBuffer))
+        if (!DetectionUtility.HasLineOfSight(transform.position, player.position, transform, losHitBuffer, player))
             return;
 
         IsPlayerDetected = true;
+        if (UXStealthDirector.Owns(gameObject)) return;
         Debug.Log("Guard detected the player!");
 
         //Records guard detection before the game ends
@@ -110,8 +111,8 @@ public class GuardDetection : MonoBehaviour, IConeDetector
         Gizmos.DrawWireSphere(transform.position, detectionRange);
 
         // Visualize detection cone using the same forward direction detection uses.
-        Vector3 forward = Application.isPlaying && guardController != null
-            ? (Vector3)guardController.FacingDirection
+        Vector3 forward = Application.isPlaying
+            ? (Vector3)ConeForward
             : transform.right;
 
         Vector3 leftBoundary = Quaternion.Euler(0, 0, detectionAngle / 2f) * forward;

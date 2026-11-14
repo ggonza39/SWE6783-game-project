@@ -80,9 +80,10 @@ public class SecurityCamera : MonoBehaviour, IConeDetector
 
     private void Update()
     {
+        IsPlayerDetected = false;
         // Stop camera activity when the game ends,
         // the GameManager is unavailable, or the camera has been hacked.
-        if (GameManager.Instance == null ||
+        if (Time.timeScale <= 0f || GameManager.Instance == null ||
             GameManager.Instance.GameEnded ||
             IsDisabled)
         {
@@ -134,12 +135,13 @@ public class SecurityCamera : MonoBehaviour, IConeDetector
 
         // The player is inside the sweep cone; make sure a wall isn't
         // blocking the camera's line of sight before counting it as a spot.
-        if (!DetectionUtility.HasLineOfSight(transform.position, player.position, transform, losHitBuffer))
+        if (!DetectionUtility.HasLineOfSight(transform.position, player.position, transform, losHitBuffer, player))
         {
             return;
         }
 
         IsPlayerDetected = true;
+        if (UXStealthDirector.Owns(gameObject)) return;
         Debug.Log("Security camera detected the player!");
 
         //Records camera detection before the game ends

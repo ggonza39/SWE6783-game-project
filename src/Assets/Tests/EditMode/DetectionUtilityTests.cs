@@ -4,6 +4,66 @@ using UnityEngine;
 public class DetectionUtilityTests
 {
     [Test]
+    public void GetSightDistance_ClipsToWallSurface()
+    {
+        var detector = new GameObject("Detector");
+        var wall = new GameObject("Wall");
+        try
+        {
+            wall.transform.position = new Vector2(2.5f, 0f);
+            wall.AddComponent<BoxCollider2D>();
+            Physics2D.SyncTransforms();
+
+            float distance = DetectionUtility.GetSightDistance(
+                Vector2.zero, Vector2.right, 6f, detector.transform, new RaycastHit2D[8]);
+
+            Assert.AreEqual(2f, distance, 0.001f);
+        }
+        finally
+        {
+            Object.DestroyImmediate(detector);
+            Object.DestroyImmediate(wall);
+        }
+    }
+
+    [Test]
+    public void HasLineOfSight_FullTriggerBufferStillFindsWall()
+    {
+        var detector = new GameObject("Detector");
+        var wall = new GameObject("Wall");
+        var triggers = new GameObject[10];
+        bool previousQuerySetting = Physics2D.queriesHitTriggers;
+        try
+        {
+            Physics2D.queriesHitTriggers = true;
+            for (int i = 0; i < triggers.Length; i++)
+            {
+                triggers[i] = new GameObject("Trigger");
+                triggers[i].transform.position = new Vector2(0.3f + i * 0.12f, 0f);
+                BoxCollider2D collider = triggers[i].AddComponent<BoxCollider2D>();
+                collider.size = new Vector2(0.05f, 1f);
+                collider.isTrigger = true;
+            }
+            wall.transform.position = new Vector2(3f, 0f);
+            wall.AddComponent<BoxCollider2D>();
+            Physics2D.SyncTransforms();
+
+            bool clear = DetectionUtility.HasLineOfSight(
+                Vector2.zero, new Vector2(5f, 0f), detector.transform, new RaycastHit2D[8]);
+
+            Assert.IsFalse(clear);
+        }
+        finally
+        {
+            Physics2D.queriesHitTriggers = previousQuerySetting;
+            foreach (GameObject trigger in triggers)
+                Object.DestroyImmediate(trigger);
+            Object.DestroyImmediate(detector);
+            Object.DestroyImmediate(wall);
+        }
+    }
+
+    [Test]
     public void IsWithinFieldOfView_TargetDirectlyAhead_ReturnsTrue()
     {
         bool result = DetectionUtility.IsWithinFieldOfView(
@@ -181,6 +241,37 @@ public class DetectionUtilityTests
         finally
         {
             Object.DestroyImmediate(detector);
+        }
+    }
+
+    [TestCase(false, true)]
+    [TestCase(true, false)]
+    public void HasLineOfSight_PlayerColliderDoesNotMaskWalls(bool wallBetween, bool expected)
+    {
+        var detector = new GameObject("Detector");
+        var player = new GameObject("Player");
+        var wall = new GameObject("Wall");
+
+        try
+        {
+            player.transform.position = new Vector2(5f, 0f);
+            player.AddComponent<BoxCollider2D>();
+
+            wall.transform.position = new Vector2(2.5f, 0f);
+            wall.AddComponent<BoxCollider2D>().enabled = wallBetween;
+            Physics2D.SyncTransforms();
+
+            bool losClear = DetectionUtility.HasLineOfSight(
+                detector.transform.position, player.transform.position, detector.transform,
+                new RaycastHit2D[8], player.transform);
+
+            Assert.AreEqual(expected, losClear);
+        }
+        finally
+        {
+            Object.DestroyImmediate(detector);
+            Object.DestroyImmediate(player);
+            Object.DestroyImmediate(wall);
         }
     }
 }

@@ -8,11 +8,14 @@ public class UXHUDController : MonoBehaviour
 
     private Transform player;
     private PlayerHiding playerHiding;
+    private PlayerController playerController;
+    private UXMissionBriefingScreen missionBriefing;
 
     private GameObject terminal;
     private TerminalInteraction terminalInteraction;
     private GameObject extractionZone;
     private EvidenceCollectible[] evidenceItems;
+    private GameObject[] hidingSpots;
 
     private Texture2D briefingTexture;
 
@@ -23,12 +26,7 @@ public class UXHUDController : MonoBehaviour
     private bool restartConfirmationVisible = false;
     private bool mainMenuConfirmationVisible = false;
     private bool restartOpenedFromPause = false;
-
-    // Edge-detection only, for showing a one-shot toast when the terminal
-    // becomes active. The actual activation state lives solely in
-    // GameManager (see TerminalAccessed below) so there is a single source
-    // of truth instead of a separately tracked flag here.
-    private bool lastTerminalActivatedForToast = false;
+    private bool lastTerminalActivatedForToast;
     private float lastSeenTerminalMessageTime = -1f;
 
     private bool TerminalAccessed =>
@@ -126,10 +124,12 @@ public class UXHUDController : MonoBehaviour
     {
         player = null;
         playerHiding = null;
+        playerController = null;
         terminal = null;
         terminalInteraction = null;
         extractionZone = null;
         evidenceItems = null;
+        hidingSpots = null;
 
         helpVisible = false;
         restartConfirmationVisible = false;
@@ -148,6 +148,7 @@ public class UXHUDController : MonoBehaviour
             player = playerObject.transform;
             playerHiding =
                 playerObject.GetComponent<PlayerHiding>();
+            playerController = playerObject.GetComponent<PlayerController>();
         }
 
         terminal = GameObject.Find("Terminal");
@@ -169,6 +170,8 @@ public class UXHUDController : MonoBehaviour
                 FindObjectsSortMode.None
             );
 
+        hidingSpots = GameObject.FindGameObjectsWithTag("HidingSpot");
+
         if (evidenceItems != null &&
             evidenceItems.Length > 0)
         {
@@ -183,6 +186,9 @@ public class UXHUDController : MonoBehaviour
             EvidenceManager.Instance != null
             ? EvidenceManager.Instance.EvidenceCollected
             : 0;
+
+        missionBriefing = SceneManager.GetActiveScene().name == "UXFacilityPreview" || ExpandedFacility
+            ? new UXMissionBriefingScreen(totalEvidence, ExpandedFacility) : null;
 
         //Creates a fresh record when player reloads the mission
         bool autoStart = startGameplayAfterReload;
@@ -200,6 +206,8 @@ public class UXHUDController : MonoBehaviour
 
     private void Update()
     {
+        if (Screen.width != hudViewportWidth || Screen.height != hudViewportHeight)
+            ConfigureGameplayViewport();
         if (briefingVisible)
         {
             // Keep keyboard access while the visible artwork button is clickable.
@@ -321,12 +329,6 @@ public class UXHUDController : MonoBehaviour
         lastEvidenceCount = evidence;
     }
 
-    // Purely reactive: TerminalInteraction is the sole authority that
-    // decides WHEN and WHETHER a terminal hack succeeds (proximity, E key,
-    // evidence check, activating GameManager, disabling cameras). This
-    // method only reads that outcome to show a matching toast, so there is
-    // no duplicate input handling, no duplicate evidence/activation checks,
-    // and no second copy of "is the terminal active" state.
     private void UpdateTerminalFeedback()
     {
         bool activated = TerminalAccessed;
@@ -379,6 +381,13 @@ public class UXHUDController : MonoBehaviour
 
         DrawHUD();
 
+        // Labels are visual guidance only: no gameplay state is changed.
+        if (!helpVisible && !restartConfirmationVisible &&
+            !mainMenuConfirmationVisible)
+            DrawObjectiveMarkers();
+        if (ExpandedFacility && Input.GetKey(KeyCode.Tab) && !helpVisible &&
+            !restartConfirmationVisible && !mainMenuConfirmationVisible && missionBriefing != null)
+            missionBriefing.DrawMapOverlay();
         if (restartConfirmationVisible)
         {
             DrawRestartConfirmation();
@@ -402,6 +411,12 @@ public class UXHUDController : MonoBehaviour
 
     private void DrawBriefing()
     {
+        if (missionBriefing != null)
+        {
+            if (missionBriefing.Draw()) StartMission();
+            return;
+        }
+
         GUI.DrawTexture(
             new Rect(0, 0, Screen.width, Screen.height),
             blackTex
@@ -557,78 +572,80 @@ public class UXHUDController : MonoBehaviour
 
     private void DrawHUD()
     {
-        int evidence =
-            EvidenceManager.Instance != null
-            ? EvidenceManager.Instance.EvidenceCollected
-            : 0;
+        int evidence = EvidenceManager.Instance != null
+            ? EvidenceManager.Instance.EvidenceCollected : 0;
+        bool hidden = playerHiding != null && playerHiding.IsHidden;
+        bool sneaking = playerController != null && playerController.IsSneaking;
+        bool sprinting = playerController != null && playerController.IsSprinting;
+        string objective = evidence < totalEvidence
+            ? "COLLECT THE EVIDENCE"
+            : (!TerminalAccessed ? "ACCESS SECURITY TERMINAL [E]" : "REACH EXTRACTION");
+        UXStealthDirector stealth = ExpandedFacility ? UXStealthDirector.Instance : null;
+        if (stealth != null) objective = stealth.Objective;
+        float s = GetHudScale(), h = GetTopBarHeight() - (ExpandedFacility ? 32f * s : 0f), p = 12f * s;
+        float usable = Screen.width - 2f * p;
+        Rect title, count, state, goal;
 
-        bool hidden =
-            playerHiding != null &&
-            playerHiding.IsHidden;
-
-        string objective;
-
-        if (evidence < totalEvidence)
+        if (Screen.width < 800)
         {
-            objective = "COLLECT THE EVIDENCE";
+            float row = h / 3f;
+            title = new Rect(p, 0f, usable, row);
+            count = new Rect(p, row, usable / 2f, row);
+            state = new Rect(p + usable / 2f, row, usable / 2f, row);
+            goal = new Rect(p, 2f * row, usable, row);
         }
-        else if (!TerminalAccessed)
+        else if (Screen.width < 1550)
         {
-            objective = "ACCESS SECURITY TERMINAL [E]";
+            float row = h * 0.55f, third = usable / 3f;
+            title = new Rect(p, 0f, third, row);
+            count = new Rect(p + third, 0f, third, row);
+            state = new Rect(p + 2f * third, 0f, third, row);
+            goal = new Rect(p, row, usable, h - row);
         }
         else
         {
-            objective = "REACH EXTRACTION";
+            title = new Rect(p, 0f, usable * 0.19f, h);
+            count = new Rect(p + usable * 0.19f, 0f, usable * 0.16f, h);
+            state = new Rect(p + usable * 0.35f, 0f, usable * 0.17f, h);
+            goal = new Rect(p + usable * 0.52f, 0f, usable * 0.48f, h);
         }
 
-        float topBarHeight = 58f;
-
-        DrawPanel(
-            new Rect(0, 0, Screen.width, topBarHeight),
-            darkTex,
-            cyanTex
-        );
-
-        GUI.Label(
-            new Rect(14, 7, 205, 44),
-            "PIXEL REBELLION",
-            TitleStyle(17)
-        );
-
-        GUI.Label(
-            new Rect(220, 7, 165, 44),
-            "EVIDENCE  " + evidence + " / " + totalEvidence,
-            CenterStyle(14, Color.white)
-        );
-
-        GUI.Label(
-            new Rect(385, 7, 180, 44),
-            hidden
-                ? "STATUS  HIDDEN"
-                : "STATUS  VISIBLE",
-            CenterStyle(
-                14,
-                hidden
-                    ? new Color(0.35f, 1f, 0.48f)
-                    : new Color(1f, 0.85f, 0.25f)
-            )
-        );
-
-        GUI.Label(
-            new Rect(
-                565,
-                7,
-                Mathf.Max(220f, Screen.width - 579f),
-                44
-            ),
-            "OBJECTIVE:  " + objective,
-            CenterStyle(
-                14,
-                new Color(0.45f, 1f, 0.55f)
-            )
-        );
-
+        DrawPanel(new Rect(0f, 0f, Screen.width, GetTopBarHeight()), darkTex, cyanTex);
+        GUI.Label(title, "PIXEL REBELLION",
+            TitleStyle(Mathf.RoundToInt(18f * s)));
+        GUI.Label(count, "EVIDENCE  " + evidence + " / " + totalEvidence,
+            CenterStyle(Mathf.RoundToInt(16f * s), Color.white));
+        GUI.Label(state, hidden ? "STATUS  HIDDEN" :
+            (sneaking ? "STATUS  SNEAKING" : (sprinting ? "STATUS  SPRINTING" : "STATUS  VISIBLE")),
+            CenterStyle(Mathf.RoundToInt(16f * s), hidden
+                ? new Color(0.35f, 1f, 0.48f)
+                : (sneaking ? new Color(0.35f, 0.82f, 1f)
+                    : new Color(1f, 0.85f, 0.25f))));
+        GUI.Label(goal, "OBJECTIVE:  " + objective,
+            CenterStyle(Mathf.RoundToInt(16f * s),
+                new Color(0.45f, 1f, 0.55f)));
+        if (stealth != null) DrawSecurityStatus(stealth, h, s);
         DrawContextPrompt(evidence);
+    }
+
+    private void DrawSecurityStatus(UXStealthDirector stealth, float y, float s)
+    {
+        Color alert = stealth.State.Phase == UXAlertPhase.Engaged ? new Color(1f, 0.35f, 0.3f) :
+            stealth.State.Phase == UXAlertPhase.Clear ? new Color(0.35f, 0.95f, 0.7f) : new Color(1f, 0.8f, 0.25f);
+        float third = Screen.width / 3f;
+        GUI.Label(new Rect(12f * s, y, third - 20f * s, 27f * s),
+            "HEALTH " + stealth.State.Health + " / 100",
+            CenterStyle(Mathf.RoundToInt(14f * s), stealth.State.Health <= 25 ? Color.red : Color.white));
+        GUI.Label(new Rect(third, y, third, 27f * s), stealth.PhaseLabel,
+            CenterStyle(Mathf.RoundToInt(14f * s), alert));
+        GUI.Label(new Rect(third * 2f, y, third, 27f * s),
+            stealth.KeyAcquired ? "ACCESS GATE: OPEN   |   TAB MAP" : "ACCESS KEY: REQUIRED   |   TAB MAP",
+            CenterStyle(Mathf.RoundToInt(13f * s), stealth.KeyAcquired ? Color.cyan : Color.yellow));
+        Color previous = GUI.color;
+        GUI.color = alert;
+        GUI.DrawTexture(new Rect(third, y + 27f * s,
+            third * stealth.State.Alert / 100f, 3f * s), Texture2D.whiteTexture);
+        GUI.color = previous;
     }
 
     private void DrawContextPrompt(int evidence)
@@ -684,11 +701,15 @@ public class UXHUDController : MonoBehaviour
                     message = "TERMINAL ACCESSED";
                     border = greenTex;
                 }
+                else if (terminalInteraction != null && terminalInteraction.PlayerNearby)
+                {
+                    message = "PRESS E TO ACCESS SECURITY TERMINAL";
+                    border = greenTex;
+                }
                 else
                 {
-                    message =
-                        "PRESS E TO ACCESS SECURITY TERMINAL";
-                    border = greenTex;
+                    message = "SECURITY TERMINAL - MOVE CLOSER";
+                    border = yellowTex;
                 }
             }
 
@@ -718,81 +739,144 @@ public class UXHUDController : MonoBehaviour
             }
         }
 
+        if (ExpandedFacility && UXStealthDirector.Instance != null)
+            message = UXStealthDirector.Instance.Prompt;
+
         if (string.IsNullOrEmpty(message))
         {
             message =
-                "WASD / ARROWS MOVE    SHIFT SPRINT    E TERMINAL    R RESTART    ESC HELP";
+                Screen.width < 1000
+                    ? "CROUCH MOVE WASD   SLOW C/CTRL   SPRINT SHIFT   USE E   HELP ESC"
+                    : "WASD / ARROWS CROUCH MOVE    C / CTRL EXTRA SLOW    SHIFT SPRINT    E TERMINAL    R RESTART    ESC HELP";
             border = cyanTex;
         }
 
-        float bottomBarHeight = 46f;
-
-        Rect bottomBar =
-            new Rect(
-                0,
-                Screen.height - bottomBarHeight,
-                Screen.width,
-                bottomBarHeight
-            );
-
-        DrawPanel(
-            bottomBar,
-            darkTex,
-            border
-        );
-
-        GUI.Label(
-            new Rect(
-                12,
-                bottomBar.y + 6,
-                Screen.width - 24,
-                34
-            ),
-            message,
-            CenterStyle(13, Color.white)
-        );
+        float s = GetHudScale();
+        float bh = GetBottomBarHeight();
+        Rect bar = new Rect(0f, Screen.height - bh, Screen.width, bh);
+        DrawPanel(bar, darkTex, border);
+        GUI.Label(new Rect(12f * s, bar.y + 3f * s,
+            Screen.width - 24f * s, bh - 6f * s), message,
+            CenterStyle(Mathf.RoundToInt(15f * s), Color.white));
+        if (ExpandedFacility && UXStealthDirector.Instance != null && UXStealthDirector.Instance.InteractionProgress > 0f)
+            GUI.DrawTexture(new Rect(0f, bar.y, Screen.width *
+                Mathf.Clamp01(UXStealthDirector.Instance.InteractionProgress), 4f * s), cyanTex);
     }
 
+    private void DrawObjectiveMarkers()
+    {
+        Camera camera = Camera.main;
+        if (camera == null) return;
+
+        int collected = EvidenceManager.Instance != null
+            ? EvidenceManager.Instance.EvidenceCollected : 0;
+
+        // Only show the current required objective to avoid label clutter.
+        if (ExpandedFacility && UXStealthDirector.Instance != null && !UXStealthDirector.Instance.KeyAcquired)
+        {
+            DrawObjectMarker(camera, UXStealthDirector.Instance.KeyPosition, "KEY", yellowTex);
+            DrawObjectMarker(camera, UXStealthDirector.Instance.GatePosition, "LOCKED", redTex);
+        }
+        else if (collected < totalEvidence)
+        {
+            if (evidenceItems != null)
+            {
+                foreach (EvidenceCollectible evidence in evidenceItems)
+                {
+                    if (evidence != null)
+                        DrawObjectMarker(camera, evidence.transform.position,
+                            "EVIDENCE", cyanTex);
+                }
+            }
+        }
+        else if (!TerminalAccessed && terminal != null)
+        {
+            DrawObjectMarker(camera, terminal.transform.position,
+                "TERMINAL [E]", yellowTex);
+        }
+        else if (TerminalAccessed && extractionZone != null)
+        {
+            DrawObjectMarker(camera, extractionZone.transform.position,
+                "EXTRACTION", greenTex);
+        }
+
+        if (ExpandedFacility && UXStealthDirector.Instance != null &&
+            UXStealthDirector.Instance.KeyAcquired && player != null &&
+            Vector2.Distance(player.position, UXStealthDirector.Instance.GatePosition) < 6f)
+            DrawObjectMarker(camera, UXStealthDirector.Instance.GatePosition, "OPEN", greenTex);
+
+        if (player == null || hidingSpots == null) return;
+        if (ExpandedFacility && playerHiding != null && playerHiding.IsHidden)
+        {
+            DrawObjectMarker(camera, player.position + new Vector3(0f, .35f, 0f), "HIDDEN", greenTex);
+            return;
+        }
+        if (playerHiding != null && playerHiding.IsHidden) return;
+
+        foreach (GameObject spot in hidingSpots)
+        {
+            if (spot != null &&
+                Vector2.Distance(player.position, spot.transform.position) <= 1.8f)
+            {
+                DrawObjectMarker(camera, spot.transform.position,
+                    ExpandedFacility ? "HIDE BAY" : "HIDE", cyanTex);
+            }
+        }
+    }
+
+    private void DrawObjectMarker(Camera camera, Vector3 worldPosition,
+        string label, Texture2D border)
+    {
+        Vector3 screen = camera.WorldToScreenPoint(worldPosition);
+        if (screen.z <= 0f ||
+            !camera.pixelRect.Contains(new Vector2(screen.x, screen.y)))
+            return;
+
+        string compactLabel = label == "EVIDENCE" ? "DATA" :
+            label == "TERMINAL [E]" ? (terminalInteraction != null && terminalInteraction.PlayerNearby ? "USE E" : "TERM") :
+            label == "EXTRACTION" ? "EXIT" :
+            (label == "KEY" || label == "LOCKED" || label == "OPEN" || label == "HIDDEN" || label == "HIDE BAY" ? label : "HIDE");
+        float s = Mathf.Min(GetHudScale(), 1.25f);
+        float width = (label == "HIDDEN" || label == "HIDE BAY" ? 94f : 66f) * s;
+        float height = 22f * s;
+        float minY = GetTopBarHeight() + 5f;
+        float maxY = Screen.height - GetBottomBarHeight() - height - 5f;
+        if (maxY < minY || Screen.width <= width + 16f)
+            return;
+
+        float x = Mathf.Clamp(screen.x - width / 2f,
+            8f, Screen.width - width - 8f);
+        float y = Mathf.Clamp(Screen.height - screen.y - 35f * s,
+            minY, maxY);
+        Rect marker = new Rect(x, y, width, height);
+
+        DrawPanel(marker, darkTex, border);
+        GUI.Label(new Rect(x + 5f * s, y + 2f * s,
+            width - 10f * s, height - 4f * s), compactLabel,
+            CenterStyle(Mathf.RoundToInt(12f * s), label == "HIDDEN" ? new Color(.45f, 1f, .65f) : Color.white));
+    }
     private void DrawToast()
     {
         if (string.IsNullOrEmpty(toastMessage) ||
             Time.unscaledTime >= toastUntil)
-        {
             return;
-        }
-
-        float remaining = toastUntil - Time.unscaledTime;
-        float alpha = Mathf.Clamp01(remaining / 0.35f);
-
-        Color previousColor = GUI.color;
+        float s = GetHudScale();
+        float alpha = Mathf.Clamp01(
+            (toastUntil - Time.unscaledTime) / 0.35f);
+        Color oldColor = GUI.color;
         GUI.color = new Color(1f, 1f, 1f, alpha);
-
-        Rect toast =
-            new Rect(
-                Screen.width - 355f,
-                70f,
-                335f,
-                46f
-            );
-
-        DrawPanel(
-            toast,
-            darkTex,
-            toastBorder != null ? toastBorder : cyanTex
-        );
-
-        GUI.Label(
-            new Rect(
-                toast.x + 12f,
-                toast.y + 6f,
-                toast.width - 24f,
-                34f
-            ),
+        float margin = 14f * s;
+        float width = Mathf.Min(360f * s,
+            Screen.width - 2f * margin);
+        Rect toast = new Rect(Screen.width - width - margin,
+            GetTopBarHeight() + 8f * s, width, 48f * s);
+        DrawPanel(toast, darkTex,
+            toastBorder != null ? toastBorder : cyanTex);
+        GUI.Label(new Rect(toast.x + 10f * s, toast.y + 4f * s,
+            toast.width - 20f * s, toast.height - 8f * s),
             toastMessage,
-            CenterStyle(13, Color.white)
-        );
-
-        GUI.color = previousColor;
+            CenterStyle(Mathf.RoundToInt(15f * s), Color.white));
+        GUI.color = oldColor;
     }
 
     private void ShowToast(
@@ -805,150 +889,145 @@ public class UXHUDController : MonoBehaviour
         toastUntil = Time.unscaledTime + duration;
     }
 
+    private float GetHudScale()
+    {
+        return Mathf.Clamp(Mathf.Min(Screen.width / 1280f,
+            Screen.height / 720f), 0.85f, 1.60f);
+    }
+
+    private float GetTopBarHeight()
+    {
+        return (Screen.width < 800 ? 102f :
+            (Screen.width < 1550 ? 74f : 54f)) * GetHudScale() +
+            (ExpandedFacility ? 32f * GetHudScale() : 0f);
+    }
+
+    private bool ExpandedFacility => SceneManager.GetActiveScene().name == "UXFacilityExpanded";
+
+    private float GetBottomBarHeight()
+    {
+        return 42f * GetHudScale();
+    }
+
+    private int hudViewportWidth = -1;
+    private int hudViewportHeight = -1;
+
     private void ConfigureGameplayViewport()
     {
         Camera camera = Camera.main;
-
-        if (camera == null)
-            return;
-
-        float screenHeight =
-            Mathf.Max(1f, Screen.height);
-
-        float topSpace =
-            58f / screenHeight;
-
-        float bottomSpace =
-            46f / screenHeight;
-
-        camera.rect =
-            new Rect(
-                0f,
-                bottomSpace,
-                1f,
-                Mathf.Max(
-                    0.1f,
-                    1f - topSpace - bottomSpace
-                )
-            );
+        if (camera == null) return;
+        float screenHeight = Mathf.Max(1f, Screen.height);
+        float topSpace = GetTopBarHeight() / screenHeight;
+        float bottomSpace = GetBottomBarHeight() / screenHeight;
+        camera.rect = new Rect(0f, bottomSpace, 1f,
+            Mathf.Max(0.1f, 1f - topSpace - bottomSpace));
+        hudViewportWidth = Screen.width;
+        hudViewportHeight = Screen.height;
     }
 
     private void DrawHelp()
     {
         GUI.DrawTexture(
-            new Rect(
-                0,
-                0,
-                Screen.width,
-                Screen.height
-            ),
+            new Rect(0, 0, Screen.width, Screen.height),
             blackTex
         );
 
-        Rect panel =
-            new Rect(
-                Screen.width / 2f - 350,
-                Screen.height / 2f - 235,
-                700,
-                470
-            );
+        float s = Mathf.Min(
+            GetHudScale(),
+            Mathf.Min(
+                (Screen.width - 20f) / 760f,
+                (Screen.height - 20f) / 500f
+            )
+        );
+
+        float w = 760f * s;
+        float h = 500f * s;
+
+        Rect panel = new Rect(
+            (Screen.width - w) / 2f,
+            (Screen.height - h) / 2f,
+            w,
+            h
+        );
 
         DrawPanel(panel, darkTex, cyanTex);
 
         GUI.Label(
-            new Rect(
-                panel.x + 40,
-                panel.y + 22,
-                panel.width - 80,
-                44
-            ),
+            new Rect(panel.x + 30f*s, panel.y + 20f*s,
+                w - 60f*s, 45f*s),
             "PAUSE / HELP",
-            TitleStyle(27)
+            TitleStyle(Mathf.RoundToInt(27f*s))
         );
 
         GUI.Label(
-            new Rect(
-                panel.x + 70,
-                panel.y + 82,
-                panel.width - 140,
-                220
-            ),
-            "WASD / ARROWS   Move       SHIFT   Sprint\n\n" +
-            "Walk over evidence to collect it automatically\n\n" +
-            "After collecting evidence, press E near the terminal\n\n" +
-            "Enter the extraction zone after it unlocks\n\n" +
-            "Hide in designated areas to avoid detection\n\n" +
-            "R   Restart (confirm)       ESC   Pause / Resume",
-            TextStyle(17, Color.white)
+            new Rect(panel.x + 35f*s, panel.y + 68f*s,
+                w - 70f*s, 32f*s),
+            "MISSION GUIDE",
+            CenterStyle(Mathf.RoundToInt(16f*s),
+                new Color(0.45f, 1f, 0.55f))
         );
 
-        float buttonWidth = 180f;
-        float gap = 18f;
-        float totalWidth = buttonWidth * 3f + gap * 2f;
-        float startX = panel.x + (panel.width - totalWidth) / 2f;
-        float buttonY = panel.y + 342f;
+        string instructions =
+            "1   Walk over evidence to collect it automatically.\n\n" +
+            "2   Press E at the terminal after collecting evidence.\n\n" +
+            "3   Enter the extraction zone once it unlocks.\n\n" +
+            "STEALTH   Move crouched by default. Marked hiding spots conceal you.\n\n" +
+            "WASD / ARROWS   Move       C / CTRL   Extra slow\n" +
+            "SHIFT   Sprint       R   Restart (confirm)       ESC   Resume";
 
-        Rect resumeButton =
-            new Rect(startX, buttonY, buttonWidth, 52f);
+        if (ExpandedFacility) instructions =
+            "1   Gold keycard opens the marked red security gate.\n\n" +
+            "2   Hold E at 3 data caches (2.5s), then the terminal (4s).\n\n" +
+            "3   Extract through the service route or the east flank.\n\n" +
+            "RED: pursuit. Break sight and hide. YELLOW: searching.\n" +
+            "Walk into an open blue bay. Green HIDDEN confirms cover.\n\n" +
+            "WASD move crouched   C / CTRL slow   SHIFT sprint\n" +
+            "TAB map   R restart (confirm)   ESC resume";
 
-        Rect restartButton =
-            new Rect(
-                startX + buttonWidth + gap,
-                buttonY,
-                buttonWidth,
-                52f
-            );
+        GUI.Label(
+            new Rect(panel.x + 70f*s, panel.y + 115f*s,
+                w - 140f*s, 235f*s),
+            instructions,
+            TextStyle(Mathf.RoundToInt(17f*s), Color.white)
+        );
 
-        Rect menuButton =
-            new Rect(
-                startX + (buttonWidth + gap) * 2f,
-                buttonY,
-                buttonWidth,
-                52f
-            );
+        float buttonWidth = 185f*s;
+        float gap = 18f*s;
+        float total = 3f*buttonWidth + 2f*gap;
+        float x = panel.x + (w - total)/2f;
+        float y = panel.y + 365f*s;
 
         if (GUI.Button(
-            resumeButton,
+            new Rect(x, y, buttonWidth, 55f*s),
             "RESUME",
-            ActionButtonStyle(16)
+            ActionButtonStyle(Mathf.RoundToInt(17f*s))
         ))
-        {
             ResumeGame();
-        }
 
         if (GUI.Button(
-            restartButton,
+            new Rect(x + buttonWidth + gap, y,
+                buttonWidth, 55f*s),
             "RESTART",
-            ActionButtonStyle(16)
+            ActionButtonStyle(Mathf.RoundToInt(17f*s))
         ))
-        {
             RequestRestart();
-        }
 
         if (GUI.Button(
-            menuButton,
+            new Rect(x + 2f*(buttonWidth + gap), y,
+                buttonWidth, 55f*s),
             "MAIN MENU",
-            ActionButtonStyle(16)
+            ActionButtonStyle(Mathf.RoundToInt(17f*s))
         ))
-        {
             RequestMainMenu();
-        }
 
         GUI.Label(
-            new Rect(
-                panel.x + 60,
-                panel.y + 407,
-                panel.width - 120,
-                30
-            ),
+            new Rect(panel.x + 35f*s, panel.y + 440f*s,
+                w - 70f*s, 28f*s),
             "ESC  RESUME",
-            CenterStyle(
-                13,
-                new Color(0.55f, 0.85f, 1f)
-            )
+            CenterStyle(Mathf.RoundToInt(14f*s),
+                new Color(0.55f, 0.85f, 1f))
         );
     }
-
     private void DrawRestartConfirmation()
     {
         // Keep the gameplay visible but inactive behind the confirmation.
@@ -1132,7 +1211,8 @@ public class UXHUDController : MonoBehaviour
             ),
             won
                 ? "Evidence secured. Extraction successful."
-                : "Security detected you. Try a different route.",
+                : (ExpandedFacility ? "Health depleted. Break sight and hide when security is alerted." :
+                    "Security detected you. Try a different route."),
             CenterStyle(15, Color.white)
         );
 
@@ -1204,7 +1284,8 @@ public class UXHUDController : MonoBehaviour
         helpVisible = false;
         toastMessage = "";
         Time.timeScale = 1f;
-        ShowToast("COLLECT EVIDENCE - AVOID SECURITY", cyanTex, 3f);
+        ShowToast(ExpandedFacility ? "FIND THE GOLD KEYCARD - TAB OPENS THE MAP" :
+            "COLLECT EVIDENCE - AVOID SECURITY", cyanTex, 3f);
 
         //Records when the player starts the mission
         GameplayMetrics.Instance?.StartSession();
