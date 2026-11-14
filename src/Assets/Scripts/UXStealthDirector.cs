@@ -15,6 +15,9 @@ public sealed class UXStealthDirector : MonoBehaviour
     public Vector2 GatePosition { get; private set; }
     public string Prompt { get; private set; } = "FIND THE GOLD ACCESS KEYCARD";
     public float InteractionProgress { get; private set; }
+    // Read-only presentation state; the director remains the interaction authority.
+    public bool InteractionAvailable => interacting != null;
+    public bool HackingSecurity => interacting is TerminalInteraction;
     public Transform Player => player;
     public bool PlayerHidden => hiding != null && hiding.IsHidden;
     public string Objective => !KeyAcquired ? "FIND THE ACCESS KEYCARD" :
