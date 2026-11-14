@@ -15,6 +15,7 @@ public class SecurityCamera : MonoBehaviour, IConeDetector
     public bool IsPlayerDetected { get; private set; }
 
     private float startingAngle;
+    private float sweepPhase;
     private Transform player;
     private PlayerHiding playerHiding;
     private readonly RaycastHit2D[] losHitBuffer = new RaycastHit2D[8];
@@ -23,12 +24,15 @@ public class SecurityCamera : MonoBehaviour, IConeDetector
     // with the exact same values used for detection.
     public Vector2 ConeOrigin => transform.position;
     public Vector2 ConeForward => transform.right;
-    public float ConeRange => detectionRange;
-    public float ConeFovAngle => detectionAngle;
+    public float ConeRange => detectionRange * (UXStealthDirector.Owns(gameObject)
+        ? UXStealthDirector.Instance.Difficulty.CameraRange : 1f);
+    public float ConeFovAngle => detectionAngle * (UXStealthDirector.Owns(gameObject)
+        ? UXStealthDirector.Instance.Difficulty.CameraAngle : 1f);
     public Color ConeColor => IsDisabled
         ? new Color(0.5f, 0.5f, 0.5f, 0.2f)
         : (IsPlayerDetected ? new Color(1f, 0f, 0f, 0.35f) : new Color(1f, 0.92f, 0.016f, 0.25f));
-    public bool ConeActive => GameManager.Instance == null || !GameManager.Instance.GameEnded;
+    public bool ConeActive => enabled && !IsDisabled &&
+        (GameManager.Instance == null || !GameManager.Instance.GameEnded);
 
     /// <summary>Called by TerminalInteraction when a terminal hacks this camera offline.</summary>
     public void SetDisabled(bool disabled)
@@ -80,10 +84,12 @@ public class SecurityCamera : MonoBehaviour, IConeDetector
 
     private void Update()
     {
+        // Pausing freezes both the sweep and its current detection feedback.
+        if (Time.timeScale <= 0f) return;
         IsPlayerDetected = false;
         // Stop camera activity when the game ends,
         // the GameManager is unavailable, or the camera has been hacked.
-        if (Time.timeScale <= 0f || GameManager.Instance == null ||
+        if (GameManager.Instance == null ||
             GameManager.Instance.GameEnded ||
             IsDisabled)
         {
@@ -96,9 +102,14 @@ public class SecurityCamera : MonoBehaviour, IConeDetector
 
     private void Sweep()
     {
-        float angle =
-            Mathf.Sin(Time.time * rotationSpeed * Mathf.Deg2Rad)
-            * sweepAngle;
+        UXDifficultyProfile profile = UXStealthDirector.Owns(gameObject)
+            ? UXStealthDirector.Instance.Difficulty : null;
+        // A camera owns its sweep clock: opening menus, restarting, and pausing
+        // cannot jump it to an unrelated point in the global game clock.
+        sweepPhase = Mathf.Repeat(sweepPhase + Time.deltaTime * rotationSpeed *
+            (profile != null ? profile.CameraSweepSpeed : 1f) * Mathf.Deg2Rad, 2f * Mathf.PI);
+        float angle = Mathf.Sin(sweepPhase) * sweepAngle *
+            (profile != null ? profile.CameraSweepArc : 1f);
 
         transform.rotation =
             Quaternion.Euler(0f, 0f, startingAngle + angle);
@@ -123,8 +134,8 @@ public class SecurityCamera : MonoBehaviour, IConeDetector
             transform.position,
             transform.right,
             player.position,
-            detectionRange,
-            detectionAngle,
+            ConeRange,
+            ConeFovAngle,
             out _,
             out _);
 
@@ -159,28 +170,28 @@ public class SecurityCamera : MonoBehaviour, IConeDetector
         // Draw detection range.
         Gizmos.DrawWireSphere(
             transform.position,
-            detectionRange
+            ConeRange
         );
 
         // Draw detection cone boundaries.
         Vector3 forward = transform.right;
 
         Vector3 leftBoundary =
-            Quaternion.Euler(0f, 0f, detectionAngle / 2f)
+            Quaternion.Euler(0f, 0f, ConeFovAngle / 2f)
             * forward;
 
         Vector3 rightBoundary =
-            Quaternion.Euler(0f, 0f, -detectionAngle / 2f)
+            Quaternion.Euler(0f, 0f, -ConeFovAngle / 2f)
             * forward;
 
         Gizmos.DrawRay(
             transform.position,
-            leftBoundary * detectionRange
+            leftBoundary * ConeRange
         );
 
         Gizmos.DrawRay(
             transform.position,
-            rightBoundary * detectionRange
+            rightBoundary * ConeRange
         );
     }
 }

@@ -150,7 +150,8 @@ public sealed class UXPreviewGuardFacingPatrol : MonoBehaviour
         transform.rotation = Quaternion.Euler(0f, 0f,
             Mathf.MoveTowardsAngle(transform.eulerAngles.z, angle, 190f * Time.deltaTime));
         if (Vector2.Angle(transform.right, heading) > 30f) return;
-        Vector2 next = Vector2.MoveTowards(transform.position, nextPoint, Mathf.Max(0f, speed) * Time.deltaTime);
+        Vector2 next = Vector2.MoveTowards(transform.position, nextPoint,
+            Mathf.Max(0f, speed) * director.Difficulty.PatrolSpeed * Time.deltaTime);
         if (!director.TryMoveGuard(transform, next)) repathAt = 0f;
     }
 

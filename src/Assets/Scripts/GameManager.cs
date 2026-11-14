@@ -48,7 +48,8 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public bool CanExtract(int requiredEvidence)
     {
-        return HasRequiredEvidence(requiredEvidence) && TerminalActivated;
+        return HasRequiredEvidence(requiredEvidence) && TerminalActivated &&
+            (!UXStealthDirector.Owns(gameObject) || UXStealthDirector.Instance.ExtractionLocksReleased);
     }
 
     /// <summary>Marks the mission's terminal objective as complete.</summary>
@@ -68,6 +69,11 @@ public class GameManager : MonoBehaviour
 
         GameEnded = true;
         PlayerWon = true;
+
+        UXStealthDirector director = UXStealthDirector.Instance;
+        if (UXStealthDirector.Owns(gameObject) && director.MissionStarted)
+            UXPlayerProgress.CompleteFacility(director.Difficulty.Mode,
+                GameplayMetrics.Instance != null ? GameplayMetrics.Instance.ElapsedSeconds : 0f);
 
         //Records if the player won the game
         GameplayMetrics.Instance?.EndSession("Won");

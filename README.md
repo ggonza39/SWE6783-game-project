@@ -1,14 +1,19 @@
 # SWE6783-game-project: Pixel Rebellion — Shadow Protocol
 
-## Expanded Level 1 demo candidate — November 12, 2026
+## Level 1 modes and saved progress — November 14, 2026
 
 Open `src` with **Unity 6000.2.2f1**, then open
-`Assets/Scenes/UXFacilityExpanded.unity` and select **Play → Deploy**.
+`Assets/Scenes/UXFacilityExpanded.unity` and select **Play → Easy/Hard → Start Level 1 → Deploy**.
 
 - **Mission:** collect the gold keycard, download three evidence caches, hack the terminal, then extract.
 - **Controls:** WASD/arrows move crouched; C/CTRL extra slow; SHIFT sprint; hold E to download/hack; hold TAB for the blueprint; ESC pause; R restart confirmation.
 - **Security:** marked cover conceals the player. Full detection starts pursuit; breaking sight and hiding lets search clear. Health does not regenerate.
-- **Status:** a Windows Unity playtest completed the mission. Pursuit/damage recovery and Windows/macOS standalone builds still require focused validation before submission.
+- **Difficulty:** Easy has slower patrols and more forgiving detection. Hard has faster patrol/pursuit, wider detection, three-hit failure, five-second data downloads, eight-second hacks, and one required eight-second exit door; the alternative entrance is sealed.
+- **Saved progress:** selected mode, display/control-reminder settings, completed runs, and best successful time per mode are stored on the current device. Retry starts a fresh mission and retains completed-run records.
+- **Status:** the supplied Windows recording completes Easy and the first Hard preset. The stronger Hard revision has isolated route/rule checks and needs a fresh Unity balance playtest before committing or rebuilding.
+
+See [Level 1 difficulty and saving](docs/Level1_Difficulty_And_Saving.md) for mode
+timings, the required Hard exit door, saved-data behavior, and the acceptance pass.
 
 See [the demo handoff and recording plan](docs/UX_EXPANDED_LEVEL1_DEMO.md) for the
 verified behavior, remaining checks and team review responsibilities.

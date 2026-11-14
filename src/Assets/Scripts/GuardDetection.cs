@@ -19,8 +19,10 @@ public class GuardDetection : MonoBehaviour, IConeDetector
     public Vector2 ConeForward => guardController != null && guardController.enabled
         ? guardController.FacingDirection
         : (Vector2)transform.right;
-    public float ConeRange => detectionRange;
-    public float ConeFovAngle => detectionAngle;
+    public float ConeRange => detectionRange * (UXStealthDirector.Owns(gameObject)
+        ? UXStealthDirector.Instance.Difficulty.GuardRange : 1f);
+    public float ConeFovAngle => detectionAngle * (UXStealthDirector.Owns(gameObject)
+        ? UXStealthDirector.Instance.Difficulty.GuardAngle : 1f);
     public Color ConeColor => IsPlayerDetected ? new Color(1f, 0f, 0f, 0.35f) : new Color(1f, 0.5f, 0f, 0.25f);
     public bool ConeActive => GameManager.Instance == null || !GameManager.Instance.GameEnded;
 
@@ -82,8 +84,8 @@ public class GuardDetection : MonoBehaviour, IConeDetector
             transform.position,
             forward,
             player.position,
-            detectionRange,
-            detectionAngle,
+            ConeRange,
+            ConeFovAngle,
             out _,
             out _);
 
@@ -108,17 +110,17 @@ public class GuardDetection : MonoBehaviour, IConeDetector
     private void OnDrawGizmos()
     {
         Gizmos.color = IsPlayerDetected ? Color.red : new Color(1f, 0.5f, 0f);
-        Gizmos.DrawWireSphere(transform.position, detectionRange);
+        Gizmos.DrawWireSphere(transform.position, ConeRange);
 
         // Visualize detection cone using the same forward direction detection uses.
         Vector3 forward = Application.isPlaying
             ? (Vector3)ConeForward
             : transform.right;
 
-        Vector3 leftBoundary = Quaternion.Euler(0, 0, detectionAngle / 2f) * forward;
-        Vector3 rightBoundary = Quaternion.Euler(0, 0, -detectionAngle / 2f) * forward;
+        Vector3 leftBoundary = Quaternion.Euler(0, 0, ConeFovAngle / 2f) * forward;
+        Vector3 rightBoundary = Quaternion.Euler(0, 0, -ConeFovAngle / 2f) * forward;
 
-        Gizmos.DrawRay(transform.position, leftBoundary * detectionRange);
-        Gizmos.DrawRay(transform.position, rightBoundary * detectionRange);
+        Gizmos.DrawRay(transform.position, leftBoundary * ConeRange);
+        Gizmos.DrawRay(transform.position, rightBoundary * ConeRange);
     }
 }

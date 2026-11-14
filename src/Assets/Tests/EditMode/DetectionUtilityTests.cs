@@ -4,6 +4,52 @@ using UnityEngine;
 public class DetectionUtilityTests
 {
     [Test]
+    public void GetSightDistance_GuardCrossingTheBeamDoesNotMaskWall()
+    {
+        var detector = new GameObject("Detector");
+        var guard = new GameObject("CrossingGuard");
+        var wall = new GameObject("Wall");
+        try
+        {
+            guard.AddComponent<GuardController>();
+            guard.AddComponent<BoxCollider2D>();
+            guard.transform.position = new Vector2(1f, 0f);
+            wall.AddComponent<BoxCollider2D>();
+            wall.transform.position = new Vector2(3.5f, 0f);
+            Physics2D.SyncTransforms();
+            Assert.AreEqual(3f, DetectionUtility.GetSightDistance(Vector2.zero, Vector2.right,
+                6f, detector.transform, new RaycastHit2D[8]), 0.001f);
+
+            Object.DestroyImmediate(wall);
+            Physics2D.SyncTransforms();
+            Assert.AreEqual(6f, DetectionUtility.GetSightDistance(Vector2.zero, Vector2.right,
+                6f, detector.transform, new RaycastHit2D[8]), 0.001f);
+        }
+        finally
+        {
+            Object.DestroyImmediate(detector);
+            Object.DestroyImmediate(guard);
+            if (wall != null) Object.DestroyImmediate(wall);
+        }
+    }
+
+    [Test]
+    public void SecurityCamera_HackHidesConeAndReenableRestoresIt()
+    {
+        var cameraObject = new GameObject("Camera");
+        try
+        {
+            SecurityCamera camera = cameraObject.AddComponent<SecurityCamera>();
+            camera.SetDisabled(true);
+            Assert.IsFalse(camera.ConeActive);
+            Assert.IsFalse(camera.IsPlayerDetected);
+            camera.SetDisabled(false);
+            Assert.AreEqual(GameManager.Instance == null || !GameManager.Instance.GameEnded, camera.ConeActive);
+        }
+        finally { Object.DestroyImmediate(cameraObject); }
+    }
+
+    [Test]
     public void GetSightDistance_ClipsToWallSurface()
     {
         var detector = new GameObject("Detector");

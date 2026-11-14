@@ -9,6 +9,15 @@ public sealed class UXStealthDirector : MonoBehaviour
     public static bool Owns(GameObject item) => Instance != null &&
         item != null && item.scene == Instance.gameObject.scene;
     public UXStealthState State { get; private set; } = new UXStealthState();
+    public UXDifficultyProfile Difficulty { get; private set; } = UXDifficultyProfile.For(UXDifficulty.Easy);
+    public bool MissionStarted { get; private set; }
+    public UXAccessLock[] AccessLocks { get; private set; } = new UXAccessLock[0];
+    public BoxCollider2D SealedAlternativeEntrance { get; private set; }
+    public int ReleasedLocks
+    {
+        get { int count = 0; foreach (UXAccessLock access in AccessLocks) if (access.IsUnlocked) count++; return count; }
+    }
+    public bool ExtractionLocksReleased => ReleasedLocks == AccessLocks.Length;
     public bool KeyAcquired { get; private set; }
     public Vector2 LastKnownPosition { get; private set; }
     public Vector2 KeyPosition { get; private set; }
@@ -18,10 +27,17 @@ public sealed class UXStealthDirector : MonoBehaviour
     // Read-only presentation state; the director remains the interaction authority.
     public bool InteractionAvailable => interacting != null;
     public bool HackingSecurity => interacting is TerminalInteraction;
+    public string InteractionAction => interacting is UXAccessLock ? "OVERRIDING EXTRACTION DOOR" :
+        (HackingSecurity ? "HACKING SECURITY" : "DOWNLOADING EVIDENCE");
+    public string InteractionInstruction => interacting is UXAccessLock ? "HOLD E TO OVERRIDE EXTRACTION DOOR (8s)" :
+        (HackingSecurity ? "HOLD E TO HACK SECURITY (" + (4f * Difficulty.InteractionDuration).ToString("0.##") + "s)" :
+        "HOLD E TO DOWNLOAD EVIDENCE (" + (2.5f * Difficulty.InteractionDuration).ToString("0.##") + "s)");
     public Transform Player => player;
     public bool PlayerHidden => hiding != null && hiding.IsHidden;
     public string Objective => !KeyAcquired ? "FIND THE ACCESS KEYCARD" :
-        (GameManager.Instance != null && GameManager.Instance.TerminalActivated ? "REACH EXTRACTION" :
+        (GameManager.Instance != null && GameManager.Instance.TerminalActivated ?
+        (ExtractionLocksReleased ? (Difficulty.Mode == UXDifficulty.Hard ?
+            "GO THROUGH THE OPEN EXIT DOOR" : "REACH EXTRACTION") : "OVERRIDE THE EXTRACTION DOOR - HOLD E 8s") :
         (EvidenceManager.Instance != null && EvidenceManager.Instance.HasEvidence(3) ?
         "HACK SECURITY - HOLD E" : "DOWNLOAD 3 DATA CACHES - HOLD E"));
     public string PhaseLabel => State.Phase == UXAlertPhase.Engaged ? "RED ALERT - BREAK SIGHT" :
@@ -49,6 +65,25 @@ public sealed class UXStealthDirector : MonoBehaviour
     private string notice;
     private float noticeUntil;
     private readonly RaycastHit2D[] sightHits = new RaycastHit2D[16];
+
+    public void BeginMission(UXDifficulty mode)
+    {
+        if (MissionStarted) return;
+        Difficulty = UXDifficultyProfile.For(mode);
+        State = new UXStealthState(Difficulty.AlertGrowth, Difficulty.SearchPatience);
+        MissionStarted = true;
+        if (Difficulty.Mode == UXDifficulty.Hard)
+        {
+            AccessLocks = new[] {
+                UXAccessLock.Create(transform, "EXIT", new Vector2(8f, -4.5f),
+                    new Vector2(0.72f, 2.02f), new Vector2(7f, -4.5f))
+            };
+            SealedAlternativeEntrance = AccessLocks[0].SealAlternativeEntrance(
+                new Vector2(11.5f, -2f), new Vector2(2.02f, 0.98f));
+            Physics2D.SyncTransforms();
+            RebuildNavigation();
+        }
+    }
 
     private void Awake()
     {
@@ -119,9 +154,11 @@ public sealed class UXStealthDirector : MonoBehaviour
         }
 
         Object target = null;
-        float duration = 2.5f;
+        float duration = 2.5f * Difficulty.InteractionDuration;
         Prompt = !KeyAcquired ? "GOLD KEYCARD OPENS THE RED SECURITY GATE" :
-            "CROUCH: WASD   SLOW: C/CTRL   SPRINT: SHIFT   DOWNLOAD: HOLD E   MAP: TAB";
+            (UXPlayerProgress.Data.showControlHints ?
+            "CROUCH: WASD   SLOW: C/CTRL   SPRINT: SHIFT   DOWNLOAD: HOLD E   MAP: TAB" :
+            "FOLLOW THE MARKED MISSION OBJECTIVES");
         float closest = 1.15f;
         foreach (EvidenceCollectible item in evidence)
         {
@@ -130,16 +167,28 @@ public sealed class UXStealthDirector : MonoBehaviour
             if (distance >= closest || !DetectionUtility.HasLineOfSight(player.position,
                     item.transform.position, player, sightHits, item.transform)) continue;
             closest = distance; target = item;
-            Prompt = "HOLD E - DOWNLOAD EVIDENCE (2.5s)";
+            Prompt = "HOLD E - DOWNLOAD EVIDENCE";
         }
         if (terminal != null && terminal.PlayerNearby && !terminal.IsActivated)
         {
             if (EvidenceManager.Instance != null && EvidenceManager.Instance.HasEvidence(3))
             {
-                target = terminal; duration = 4f;
-                Prompt = "HOLD E - HACK SECURITY (4s)";
+                target = terminal; duration = 4f * Difficulty.InteractionDuration;
+                Prompt = "HOLD E - HACK SECURITY";
             }
             else Prompt = "TERMINAL LOCKED - DOWNLOAD ALL 3 CACHES FIRST";
+        }
+        foreach (UXAccessLock access in AccessLocks)
+        {
+            if (access.IsUnlocked || Vector2.Distance(player.position, access.transform.position) >= 1.15f ||
+                !DetectionUtility.HasLineOfSight(player.position, access.transform.position, player, sightHits, access.transform)) continue;
+            if (!KeyAcquired) { Prompt = "ACCESS LOCK - FIND THE GOLD KEYCARD FIRST"; continue; }
+            if (GameManager.Instance == null || !GameManager.Instance.TerminalActivated ||
+                !GameManager.Instance.HasRequiredEvidence(3))
+            { Prompt = "EXIT DOOR LOCKED - DOWNLOAD ALL DATA AND HACK SECURITY FIRST"; continue; }
+            target = access; duration = Difficulty.ExitDoorDuration;
+            Prompt = "HOLD E - OVERRIDE EXTRACTION DOOR (8s)";
+            break;
         }
         if (target != interacting) { interacting = target; InteractionProgress = 0f; }
         bool holding = target != null && Input.GetKey(KeyCode.E);
@@ -158,12 +207,21 @@ public sealed class UXStealthDirector : MonoBehaviour
                 else if (target is TerminalInteraction security)
                 {
                     security.ActivateFromDownload();
-                    if (security.IsActivated) Notice("CAMERAS OFFLINE - REACH EXTRACTION", 5f);
+                    if (security.IsActivated) Notice(ExtractionLocksReleased ? "CAMERAS OFFLINE - REACH EXTRACTION" :
+                        "CAMERAS OFFLINE - OVERRIDE THE MARKED EXTRACTION DOOR", 5f);
+                }
+                else if (target is UXAccessLock access)
+                {
+                    access.Unlock(); RebuildNavigation();
+                    Notice("EXTRACTION DOOR OPEN - USE THE WEST SERVICE ENTRANCE", 4f);
                 }
                 interacting = null; InteractionProgress = 0f;
             }
         }
         if (target == null && noticeUntil > Time.time) Prompt = notice;
+        if (target == null && GameManager.Instance != null && GameManager.Instance.TerminalActivated &&
+            !ExtractionLocksReleased && noticeUntil <= Time.time)
+            Prompt = "EXIT DOOR LOCKED - HOLD E AT ITS CONTROL FOR 8s (TAB MAP)";
         if (PlayerHidden && target == null && noticeUntil <= Time.time)
             Prompt = State.Responding ? "HIDDEN - WAIT FOR YELLOW SEARCH TO CLEAR" : "HIDDEN - WATCH THE PATROL BEFORE MOVING";
         else if (!PlayerHidden && target == null && noticeUntil <= Time.time && hidingBays != null)
@@ -175,7 +233,7 @@ public sealed class UXStealthDirector : MonoBehaviour
     public void Hit()
     {
         if (PlayerHidden || GameManager.Instance == null || GameManager.Instance.GameEnded ||
-            !State.TryDamage(25)) return;
+            !State.TryDamage(Difficulty.HitDamage)) return;
         Notice("HIT! BREAK SIGHT AND REACH MARKED COVER", 2f);
         if (!State.Alive) GameManager.Instance.LoseGame();
     }

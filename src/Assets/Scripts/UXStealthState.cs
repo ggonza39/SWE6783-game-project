@@ -12,6 +12,16 @@ public sealed class UXStealthState
     public bool Alive => Health > 0;
     private float unseenTime;
     private float hitProtection;
+    private readonly float alertGrowth;
+    private readonly float searchPatience;
+
+    public UXStealthState(float alertGrowthMultiplier = 1f, float searchPatienceMultiplier = 1f)
+    {
+        alertGrowth = float.IsNaN(alertGrowthMultiplier) || float.IsInfinity(alertGrowthMultiplier)
+            ? 1f : Math.Max(0.5f, Math.Min(2.5f, alertGrowthMultiplier));
+        searchPatience = float.IsNaN(searchPatienceMultiplier) || float.IsInfinity(searchPatienceMultiplier)
+            ? 1f : Math.Max(1f, Math.Min(2f, searchPatienceMultiplier));
+    }
 
     public void Tick(float seconds, bool guardSeesPlayer, bool cameraSeesPlayer, bool hidden)
     {
@@ -21,21 +31,21 @@ public sealed class UXStealthState
         if (seen)
         {
             unseenTime = 0f;
-            Alert = Math.Min(100f, Alert + seconds * (cameraSeesPlayer ? 125f : 85f));
+            Alert = Math.Min(100f, Alert + seconds * (cameraSeesPlayer ? 125f : 85f) * alertGrowth);
             Phase = Alert >= 100f || Responding ? UXAlertPhase.Engaged : UXAlertPhase.Suspicious;
             return;
         }
 
         unseenTime += seconds;
-        if (Phase == UXAlertPhase.Engaged && unseenTime < 1.6f) return;
+        if (Phase == UXAlertPhase.Engaged && unseenTime < 1.6f * searchPatience) return;
         if (Responding)
         {
             Phase = UXAlertPhase.Searching;
             // Time is measured since line of sight broke, not since entering cover.
-            Alert = Math.Max(0f, Alert - seconds * (hidden ? 25f : 14f));
-            if (Alert > 0f || unseenTime < (hidden ? 5f : 9f)) return;
+            Alert = Math.Max(0f, Alert - seconds * (hidden ? 25f : 14f) / searchPatience);
+            if (Alert > 0f || unseenTime < (hidden ? 5f : 9f) * searchPatience) return;
         }
-        else Alert = Math.Max(0f, Alert - seconds * 32f);
+        else Alert = Math.Max(0f, Alert - seconds * 32f / searchPatience);
         Phase = Alert > 0f ? UXAlertPhase.Suspicious : UXAlertPhase.Clear;
     }
 
