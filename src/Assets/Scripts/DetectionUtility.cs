@@ -95,6 +95,12 @@ public static class DetectionUtility
             if (hitCollider.isTrigger)
                 continue;
 
+            // Actors are targets, not scenery. A guard crossing another detector's
+            // rays must not cut moving holes in its cone or shield the player.
+            if (hitCollider.GetComponentInParent<GuardController>() != null ||
+                hitCollider.GetComponentInParent<PlayerController>() != null)
+                continue;
+
             visibleDistance = Mathf.Min(visibleDistance, hits[i].distance);
         }
 

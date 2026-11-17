@@ -21,6 +21,9 @@ public class GameplayMetrics : MonoBehaviour
     private float elapsedTime;
     private bool sessionStarted;
     private bool sessionSaved;
+    private string sessionDifficulty;
+    public float ElapsedSeconds => elapsedTime;
+    public int TotalDetections => guardDetections + cameraDetections;
 
     private int guardDetections;
     private int cameraDetections;
@@ -85,6 +88,7 @@ public class GameplayMetrics : MonoBehaviour
 
     public void StartSession()
     {
+        sessionDifficulty = SelectedDifficulty;
         sessionID = Guid.NewGuid().ToString("N");
         startTime = Time.time;
         elapsedTime = 0f;
@@ -172,7 +176,7 @@ public class GameplayMetrics : MonoBehaviour
         {
             PlayerID,
             sessionID,
-            SelectedDifficulty,
+            sessionDifficulty,
             elapsedTime.ToString("F2", CultureInfo.InvariantCulture),
             guardDetections.ToString(),
             cameraDetections.ToString(),
@@ -217,7 +221,7 @@ public class GameplayMetrics : MonoBehaviour
         {
             PlayerID = PlayerID,
             SessionID = sessionID,
-            Difficulty = SelectedDifficulty,
+            Difficulty = sessionDifficulty,
             TimeSeconds = elapsedTime,
             GuardDetections = guardDetections,
             CameraDetections = cameraDetections,

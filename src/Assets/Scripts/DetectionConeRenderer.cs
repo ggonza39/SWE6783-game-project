@@ -8,10 +8,13 @@ using UnityEngine.Rendering;
 public class DetectionConeRenderer : MonoBehaviour
 {
     private const int Segments = 48;
+    private const int EdgeSearchSteps = 6;
+    private const int MaxMeshSegments = Segments * 3;
+    private const float EdgeDistanceThreshold = 0.25f;
 
     public IConeDetector Detector { get; set; }
 
-    private readonly Vector3[] vertices = new Vector3[Segments + 2];
+    private readonly Vector3[] vertices = new Vector3[MaxMeshSegments + 2];
     private Mesh mesh;
     private MeshRenderer meshRenderer;
     private Material material;
@@ -52,13 +55,13 @@ public class DetectionConeRenderer : MonoBehaviour
         mesh.MarkDynamic();
         meshFilter.sharedMesh = mesh;
 
-        int[] triangles = new int[Segments * 3];
+        int[] triangles = new int[MaxMeshSegments * 3];
         Color32[] colors = new Color32[vertices.Length];
         for (int i = 0; i < colors.Length; i++)
             colors[i] = Color.white;
 
         // The top-down camera sees these triangles from the negative Z side.
-        for (int i = 0; i < Segments; i++)
+        for (int i = 0; i < MaxMeshSegments; i++)
         {
             triangles[i * 3] = 0;
             triangles[i * 3 + 1] = i + 2;
@@ -89,6 +92,7 @@ public class DetectionConeRenderer : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (meshRenderer == null || mesh == null || material == null) return;
         meshRenderer.enabled = Detector != null && Detector.ConeActive;
         if (!meshRenderer.enabled)
             return;
@@ -103,7 +107,8 @@ public class DetectionConeRenderer : MonoBehaviour
         float fovAngle = Detector.ConeFovAngle;
 
         Vector2 origin = Detector.ConeOrigin;
-        Vector3 worldOrigin = new Vector3(origin.x, origin.y, transform.position.z);
+        // Stay just behind coplanar wall sprites at the same sorting order.
+        Vector3 worldOrigin = new Vector3(origin.x, origin.y, transform.position.z + 0.01f);
         Transform coneTransform = meshRenderer.transform;
         coneTransform.position = worldOrigin;
 
@@ -113,17 +118,49 @@ public class DetectionConeRenderer : MonoBehaviour
         float startAngle = -fovAngle / 2f;
         float angleStep = fovAngle / Segments;
 
-        for (int i = 0; i <= Segments; i++)
+        int count = 1;
+        SightSample previous = Cast(origin, worldOrigin, forward, startAngle, range);
+        vertices[count] = coneTransform.InverseTransformPoint(previous.point);
+        for (int i = 1; i <= Segments; i++)
         {
-            float angle = startAngle + angleStep * i;
-            Vector3 direction = Quaternion.Euler(0f, 0f, angle) * forward;
-            float visibleRange = DetectionUtility.GetSightDistance(
-                origin, direction, range, transform, sightHits, player);
-            vertices[i + 1] = coneTransform.InverseTransformPoint(worldOrigin + direction * visibleRange);
+            SightSample current = Cast(origin, worldOrigin, forward, startAngle + angleStep * i, range);
+            if (Mathf.Abs(previous.distance - current.distance) > EdgeDistanceThreshold)
+            {
+                // Locate the silhouette between rays instead of stretching one
+                // large triangle across a wall corner as the detector turns.
+                SightSample near = previous, far = current;
+                for (int step = 0; step < EdgeSearchSteps; step++)
+                {
+                    SightSample middle = Cast(origin, worldOrigin, forward,
+                        (near.angle + far.angle) * 0.5f, range);
+                    if (Mathf.Abs(near.distance - middle.distance) > EdgeDistanceThreshold)
+                        far = middle;
+                    else near = middle;
+                }
+                vertices[++count] = coneTransform.InverseTransformPoint(near.point);
+                vertices[++count] = coneTransform.InverseTransformPoint(far.point);
+            }
+            vertices[++count] = coneTransform.InverseTransformPoint(current.point);
+            previous = current;
         }
 
+        // Reuse the same mesh arrays. Unused fan triangles collapse to zero area.
+        for (int i = count + 1; i < vertices.Length; i++) vertices[i] = vertices[count];
         mesh.vertices = vertices;
         mesh.RecalculateBounds();
+    }
+
+    private struct SightSample
+    {
+        public float angle, distance;
+        public Vector3 point;
+    }
+
+    private SightSample Cast(Vector2 origin, Vector3 worldOrigin, Vector3 forward, float angle, float range)
+    {
+        Vector3 direction = Quaternion.Euler(0f, 0f, angle) * forward;
+        float distance = DetectionUtility.GetSightDistance(origin, direction, range, transform, sightHits, player);
+        return new SightSample { angle = angle, distance = distance, point = worldOrigin + direction * distance };
     }
 
     private void OnDisable()

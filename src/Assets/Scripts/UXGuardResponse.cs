@@ -47,18 +47,18 @@ public sealed class UXGuardResponse : MonoBehaviour
                 path.Clear(); repathAt = 0f; searchAt = 0f;
             }
             bool canAim = sight != null && sight.IsPlayerDetected && !director.PlayerHidden &&
-                Vector2.Distance(transform.position, director.Player.position) <= 3.6f;
+                Vector2.Distance(transform.position, director.Player.position) <= director.Difficulty.ShootingRange;
             if (canAim)
             {
                 Vector2 delta = director.Player.position - transform.position;
                 Turn(delta, 210f);
                 aimTime += Time.deltaTime;
                 DrawBeam(delta);
-                if (aimTime >= 0.8f && Time.time >= fireAt &&
+                if (aimTime >= director.Difficulty.AimTime && Time.time >= fireAt &&
                     DetectionUtility.HasLineOfSight(transform.position, director.Player.position,
                         transform, sightHits, director.Player))
                 {
-                    director.Hit(); fireAt = Time.time + 1.35f; flashUntil = Time.time + 0.08f;
+                    director.Hit(); fireAt = Time.time + director.Difficulty.ShotCooldown; flashUntil = Time.time + 0.08f;
                 }
             }
             else
@@ -99,6 +99,7 @@ public sealed class UXGuardResponse : MonoBehaviour
 
     private void Navigate(Vector2 target, float speed)
     {
+        speed *= director.Difficulty.ResponseSpeed;
         if (Time.time >= repathAt)
         {
             path = director.Path(transform.position, target); pathStep = 0;

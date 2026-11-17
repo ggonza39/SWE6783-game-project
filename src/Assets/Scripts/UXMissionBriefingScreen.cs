@@ -112,10 +112,10 @@ public sealed class UXMissionBriefingScreen
             "Collect " + evidenceCount + " evidence " + (evidenceCount == 1 ? "cache." : "caches.") +
             "\nWalk over each to pick it up.", Gold);
         DrawObjective(new Rect(448f, 486f, 384f, 122f), "02", "CUT THE CAMERAS",
-            expanded ? "Hold E at 3 data caches (2.5s each).\nThen hold E at the terminal (4s)." :
+            expanded ? "Hold E to download the evidence.\nThen hack the security terminal." :
             "With all data, approach the terminal.\nPress E to hack security.", Cyan);
         DrawObjective(new Rect(848f, 486f, 384f, 122f), "03", "REACH EXTRACTION",
-            expanded ? "Green exit: service route or east flank.\nWalk into blue bays; green HIDDEN confirms cover." :
+            expanded ? "Complete the mission objectives.\nReach the marked extraction point." :
             "Head for the green exit.\nAll objectives must be complete.", Green);
 
         DrawControls();
@@ -236,6 +236,22 @@ public sealed class UXMissionBriefingScreen
         }
 
         float scan = Mathf.Repeat(Time.unscaledTime * 0.16f, 1f);
+        if (tacticalMap && expanded && UXStealthDirector.Instance != null)
+            foreach (UXAccessLock access in UXStealthDirector.Instance.AccessLocks)
+            {
+                Vector2 at = MapPoint(access.transform.position, map);
+                Color color = access.IsUnlocked ? Green : Gold;
+                DrawMapMarker(at, color, 10f);
+                Label(new Rect(at.x + 8f, at.y - 17f, 98f, 18f), "EXIT DOOR", 10, color, true);
+            }
+        if (tacticalMap && expanded && UXStealthDirector.Instance != null &&
+            UXStealthDirector.Instance.SealedAlternativeEntrance != null)
+        {
+            Bounds wall = UXStealthDirector.Instance.SealedAlternativeEntrance.bounds;
+            Vector2 topLeft = MapPoint(new Vector2(wall.min.x, wall.max.y), map);
+            Fill(new Rect(topLeft.x, topLeft.y, wall.size.x * unit, wall.size.y * unit),
+                new Color(0.60f, 0.32f, 0.12f));
+        }
         Fill(new Rect(map.x + scan * (map.width - 2f), map.y, 2f, map.height),
             new Color(0.2f, 0.95f, 1f, 0.45f));
         Label(new Rect(panel.x + 18f, panel.yMax - 34f, 130f, 22f), "DATA", 11, Gold, true);

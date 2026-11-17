@@ -10,6 +10,7 @@ public class UXHUDController : MonoBehaviour
     private PlayerHiding playerHiding;
     private PlayerController playerController;
     private UXMissionBriefingScreen missionBriefing;
+    private UXMissionMenuScreen missionMenu;
 
     private GameObject terminal;
     private TerminalInteraction terminalInteraction;
@@ -30,6 +31,7 @@ public class UXHUDController : MonoBehaviour
     private float lastSeenTerminalMessageTime = -1f;
     private float interactionCompletedUntil = -1f;
     private string interactionCompletedLabel = "";
+    private int lastReleasedLocks;
 
     private bool TerminalAccessed =>
         GameManager.Instance != null && GameManager.Instance.TerminalActivated;
@@ -141,6 +143,7 @@ public class UXHUDController : MonoBehaviour
         lastSeenTerminalMessageTime = -1f;
         interactionCompletedUntil = -1f;
         interactionCompletedLabel = "";
+        lastReleasedLocks = 0;
         toastMessage = "";
         toastUntil = 0f;
         toastBorder = cyanTex;
@@ -193,6 +196,8 @@ public class UXHUDController : MonoBehaviour
 
         missionBriefing = SceneManager.GetActiveScene().name == "UXFacilityPreview" || ExpandedFacility
             ? new UXMissionBriefingScreen(totalEvidence, ExpandedFacility) : null;
+        missionMenu = ExpandedFacility ? new UXMissionMenuScreen() : null;
+        if (ExpandedFacility) UXPlayerProgress.ApplyDisplaySettings();
 
         //Creates a fresh record when player reloads the mission
         bool autoStart = startGameplayAfterReload;
@@ -201,7 +206,10 @@ public class UXHUDController : MonoBehaviour
         startGameplayAfterReload = false;
 
         if (autoStart)
+        {
+            ConfigureMissionDifficulty();
             GameplayMetrics.Instance?.StartSession();
+        }
 
 
         ConfigureGameplayViewport();
@@ -214,6 +222,16 @@ public class UXHUDController : MonoBehaviour
             ConfigureGameplayViewport();
         if (briefingVisible)
         {
+            if (missionMenu != null && !missionMenu.BriefingVisible)
+            {
+                missionMenu.HandleKeyboard();
+                return;
+            }
+            if (missionMenu != null && Input.GetKeyDown(KeyCode.Escape))
+            {
+                missionMenu.ShowHome();
+                return;
+            }
             // Keep keyboard access while the visible artwork button is clickable.
             if (Input.GetKeyDown(KeyCode.Return) ||
                 Input.GetKeyDown(KeyCode.KeypadEnter) ||
@@ -299,6 +317,12 @@ public class UXHUDController : MonoBehaviour
 
         UpdateEvidenceFeedback();
         UpdateTerminalFeedback();
+        if (ExpandedFacility && UXStealthDirector.Instance != null)
+        {
+            int released = UXStealthDirector.Instance.ReleasedLocks;
+            if (released > lastReleasedLocks) ConfirmInteraction("EXTRACTION DOOR OPEN");
+            lastReleasedLocks = released;
+        }
     }
 
     private void UpdateEvidenceFeedback()
@@ -345,7 +369,10 @@ public class UXHUDController : MonoBehaviour
         if (activated && !lastTerminalActivatedForToast)
         {
             ConfirmInteraction("SECURITY HACKED - CAMERAS OFFLINE");
-            ShowToast("EXIT UNLOCKED - REACH EXTRACTION", greenTex, 2.6f);
+            bool routeLocked = ExpandedFacility && UXStealthDirector.Instance != null &&
+                !UXStealthDirector.Instance.ExtractionLocksReleased;
+            ShowToast(routeLocked ? "CAMERAS OFFLINE - OVERRIDE THE EXIT DOOR" :
+                "EXIT UNLOCKED - REACH EXTRACTION", greenTex, 2.6f);
         }
 
         lastTerminalActivatedForToast = activated;
@@ -417,9 +444,15 @@ public class UXHUDController : MonoBehaviour
 
     private void DrawBriefing()
     {
+        if (missionMenu != null && !missionMenu.BriefingVisible)
+        {
+            missionMenu.Draw();
+            return;
+        }
         if (missionBriefing != null)
         {
             if (missionBriefing.Draw()) StartMission();
+            if (missionMenu != null) missionMenu.DrawBriefingNavigation();
             return;
         }
 
@@ -640,12 +673,15 @@ public class UXHUDController : MonoBehaviour
             stealth.State.Phase == UXAlertPhase.Clear ? new Color(0.35f, 0.95f, 0.7f) : new Color(1f, 0.8f, 0.25f);
         float third = Screen.width / 3f;
         GUI.Label(new Rect(12f * s, y, third - 20f * s, 27f * s),
-            "HEALTH " + stealth.State.Health + " / 100",
-            CenterStyle(Mathf.RoundToInt(14f * s), stealth.State.Health <= 25 ? Color.red : Color.white));
+            stealth.Difficulty.Mode.ToString().ToUpperInvariant() + "  |  HEALTH " + stealth.State.Health + " / 100",
+            CenterStyle(Mathf.RoundToInt(14f * s), stealth.State.Health <= stealth.Difficulty.HitDamage ? Color.red : Color.white));
         GUI.Label(new Rect(third, y, third, 27f * s), stealth.PhaseLabel,
             CenterStyle(Mathf.RoundToInt(14f * s), alert));
         GUI.Label(new Rect(third * 2f, y, third, 27f * s),
-            stealth.KeyAcquired ? "ACCESS GATE: OPEN   |   TAB MAP" : "ACCESS KEY: REQUIRED   |   TAB MAP",
+            stealth.KeyAcquired ? (stealth.Difficulty.Mode == UXDifficulty.Hard ?
+                "EXIT DOOR: " + (stealth.ExtractionLocksReleased ? "OPEN" : "LOCKED") + "   |   TAB MAP" :
+                "ACCESS GATE: OPEN   |   TAB MAP") :
+                "ACCESS KEY: REQUIRED   |   TAB MAP",
             CenterStyle(Mathf.RoundToInt(13f * s), stealth.KeyAcquired ? Color.cyan : Color.yellow));
         Color previous = GUI.color;
         GUI.color = alert;
@@ -776,7 +812,7 @@ public class UXHUDController : MonoBehaviour
         GUI.Label(new Rect(12f * s, bar.y + 3f * s,
             Screen.width - 24f * s, (ExpandedFacility ? 40f * s : bh) - 6f * s), message,
             CenterStyle(Mathf.RoundToInt((Screen.width < 1000 ? 13f : 15f) * s), Color.white));
-        if (ExpandedFacility)
+        if (ExpandedFacility && UXPlayerProgress.Data.showControlHints)
             GUI.Label(new Rect(12f * s, bar.y + 47f * s,
                 Screen.width - 24f * s, 23f * s),
                 "HOLD E: INTERACT    |    TAB: MAP    |    ESC: PAUSE",
@@ -796,12 +832,10 @@ public class UXHUDController : MonoBehaviour
         float progress = Mathf.Clamp01(stealth.InteractionProgress);
         bool active = progress > 0f;
         bool completed = !active && interactionCompletedUntil > Time.time;
-        bool hacking = stealth.HackingSecurity;
         Color accent = completed ? new Color(0.36f, 1f, 0.62f) :
             new Color(0.20f, 0.88f, 1f);
         string label = completed ? interactionCompletedLabel :
-            (hacking ? (active ? "HACKING SECURITY" : "HOLD E TO HACK SECURITY") :
-            (active ? "DOWNLOADING EVIDENCE" : "HOLD E TO DOWNLOAD EVIDENCE"));
+            (active ? stealth.InteractionAction : stealth.InteractionInstruction);
         // Keep the number outside the fill so its contrast never changes.
         int percent = completed ? 100 : Mathf.Min(99, Mathf.FloorToInt(progress * 100f));
         float padding = 24f * s;
@@ -881,6 +915,12 @@ public class UXHUDController : MonoBehaviour
         {
             DrawObjectMarker(camera, terminal.transform.position,
                 "TERMINAL [E]", yellowTex);
+        }
+        else if (ExpandedFacility && UXStealthDirector.Instance != null && !UXStealthDirector.Instance.ExtractionLocksReleased)
+        {
+            foreach (UXAccessLock access in UXStealthDirector.Instance.AccessLocks)
+                if (!access.IsUnlocked)
+                    DrawObjectMarker(camera, access.transform.position, "EXIT DOOR [HOLD E]", yellowTex);
         }
         else if (TerminalAccessed && extractionZone != null)
         {
@@ -1066,8 +1106,8 @@ public class UXHUDController : MonoBehaviour
 
         if (ExpandedFacility) instructions =
             "1   Gold keycard opens the marked red security gate.\n\n" +
-            "2   Hold E at 3 data caches (2.5s), then the terminal (4s).\n\n" +
-            "3   Extract through the service route or the east flank.\n\n" +
+            "2   Hold E to download all data and hack the terminal.\n\n" +
+            "3   Follow the mission objectives to extraction.\n\n" +
             "RED: pursuit. Break sight and hide. YELLOW: searching.\n" +
             "Walk into an open blue bay. Green HIDDEN confirms cover.\n\n" +
             "WASD move crouched   C / CTRL slow   SHIFT sprint\n" +
@@ -1305,6 +1345,14 @@ public class UXHUDController : MonoBehaviour
             CenterStyle(15, Color.white)
         );
 
+        if (ExpandedFacility && UXStealthDirector.Instance != null)
+            GUI.Label(new Rect(result.x + 25f, result.y + 148f, result.width - 50f, 25f),
+                UXStealthDirector.Instance.Difficulty.Mode.ToString().ToUpperInvariant() +
+                (GameplayMetrics.Instance != null ? "  |  TIME " +
+                    UXPlayerProgress.FormatTime(GameplayMetrics.Instance.ElapsedSeconds) +
+                    "  |  DETECTIONS " + GameplayMetrics.Instance.TotalDetections : ""),
+                CenterStyle(12, new Color(0.65f, 0.88f, 1f)));
+
         Rect retryButton =
             new Rect(
                 result.x + 65,
@@ -1369,6 +1417,7 @@ public class UXHUDController : MonoBehaviour
 
     private void StartMission()
     {
+        ConfigureMissionDifficulty();
         briefingVisible = false;
         helpVisible = false;
         toastMessage = "";
@@ -1378,6 +1427,13 @@ public class UXHUDController : MonoBehaviour
 
         //Records when the player starts the mission
         GameplayMetrics.Instance?.StartSession();
+    }
+
+    private void ConfigureMissionDifficulty()
+    {
+        if (!ExpandedFacility || UXStealthDirector.Instance == null) return;
+        UXStealthDirector.Instance.BeginMission(UXPlayerProgress.Data.difficulty);
+        GameplayMetrics.SelectedDifficulty = UXStealthDirector.Instance.Difficulty.Mode.ToString();
     }
 
     private void PauseGame()

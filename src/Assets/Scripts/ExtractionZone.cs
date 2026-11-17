@@ -33,11 +33,12 @@ public class ExtractionZone : MonoBehaviour
                 "Extraction locked. Collect the required evidence first."
             );
         }
-        else
+        else if (!GameManager.Instance.TerminalActivated)
         {
             Debug.Log(
                 "Extraction locked. Access the security terminal first."
             );
         }
+        else Debug.Log("Extraction locked. Override the marked exit door and enter through the west service entrance.");
     }
 }
