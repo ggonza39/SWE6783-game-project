@@ -96,10 +96,11 @@ public class PlayerSpriteSetup : AssetPostprocessor
         // The Deluxe preview owns its art scale and narrow-passage hitbox.
         // Applying the legacy sprite here would resize and auto-save that body.
         if (player.scene.path == "Assets/Scenes/UXFacilityPreview.unity" ||
-            player.scene.path == "Assets/Scenes/UXFacilityExpanded.unity")
+            player.scene.path == UXCampaign.FacilityScene ||
+            player.scene.path == UXCampaign.CrimsonScene)
         {
             if (verbose)
-                Debug.Log("The facility preview uses its own Deluxe player setup.");
+                Debug.Log("This authored scene uses its own Deluxe player setup.");
             return false;
         }
 

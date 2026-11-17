@@ -19,10 +19,12 @@ public class DetectionConeRenderer : MonoBehaviour
     private MeshRenderer meshRenderer;
     private Material material;
     private Transform player;
+    private Camera view;
     private readonly RaycastHit2D[] sightHits = new RaycastHit2D[32];
 
     private void Awake()
     {
+        view=Camera.main;
         PlayerController playerController = FindFirstObjectByType<PlayerController>();
         if (playerController != null)
             player = playerController.transform;
@@ -96,6 +98,13 @@ public class DetectionConeRenderer : MonoBehaviour
         meshRenderer.enabled = Detector != null && Detector.ConeActive;
         if (!meshRenderer.enabled)
             return;
+        if(view!=null)
+        {
+            Vector2 delta=Detector.ConeOrigin-(Vector2)view.transform.position;
+            if(Mathf.Abs(delta.x)>view.orthographicSize*view.aspect+Detector.ConeRange ||
+                Mathf.Abs(delta.y)>view.orthographicSize+Detector.ConeRange)
+            {meshRenderer.enabled=false;return;}
+        }
 
         material.color = Detector.ConeColor;
         RebuildMesh();

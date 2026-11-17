@@ -23,6 +23,7 @@ public class GameplayMetrics : MonoBehaviour
     private bool sessionSaved;
     private string sessionDifficulty;
     public float ElapsedSeconds => elapsedTime;
+    public string SessionID => sessionID;
     public int TotalDetections => guardDetections + cameraDetections;
 
     private int guardDetections;

@@ -28,7 +28,7 @@ public static class ConePolishChecks
         var go = new GameObject(name); go.transform.position = new Vector3(x,y);
         var box = go.AddComponent<BoxCollider2D>(); box.size = new Vector2(width,height); return box;
     }
-    private static RaycastHit2D[] Query(Vector2 origin, Vector2 direction, float range)
+    public static RaycastHit2D[] Query(Vector2 origin, Vector2 direction, float range)
     {
         var hits = new List<RaycastHit2D>();
         foreach (BoxCollider2D box in Object.FindObjectsByType<BoxCollider2D>(FindObjectsSortMode.None))

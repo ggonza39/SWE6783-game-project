@@ -43,7 +43,7 @@ public static class Level1FeatureChecks
         save = new UXProgressStore(path);
         Check(save.Data.FindLevel("facility_01").easyClears == 3, "Backup did not recover completion.");
         Check(save.Save(), "Recovered profile could not repair the primary.");
-        string future = "{\"gameId\":\"PixelRebellion\",\"schemaVersion\":2}";
+        string future = "{\"gameId\":\"PixelRebellion\",\"schemaVersion\":"+(UXPlayerSaveData.CurrentVersion+1)+"}";
         File.WriteAllText(path, future); save = new UXProgressStore(path);
         Check(!save.Save() && File.ReadAllText(path) == future, "A newer save version was overwritten.");
         File.Delete(path + ".bak"); File.WriteAllText(path, "{broken"); save = new UXProgressStore(path);
@@ -220,10 +220,16 @@ public static class Level1FeatureChecks
         var sight = guard.AddComponent<GuardDetection>();
         var director = At("Director",0,0).AddComponent<UXStealthDirector>(); Call(director,"Awake");
         director.BeginMission(mode); Call(sight,"Start");
-        // A 30-degree offset is outside Easy's actual cone and inside Hard's.
+        // Both modes use the agreed sight footprint; Hard pressure comes from fire/pursuit.
         player.transform.position = new Vector3(1.732f,1f);
         Call(sight,"Update");
-        Check(sight.IsPlayerDetected == (mode == UXDifficulty.Hard), "Detection does not match the selected cone.");
+        Check(!sight.IsPlayerDetected, "Guard cone is wider than the agreed Easy footprint.");
+        player.transform.position = new Vector3(1.879f,.684f); Call(sight,"Update");
+        Check(sight.IsPlayerDetected, "Guard missed a player inside the shared cone.");
+        player.transform.position = new Vector3(3.75f,0f); Call(sight,"Update");
+        Check(sight.IsPlayerDetected, "Guard missed a player inside the shared range.");
+        player.transform.position = new Vector3(3.85f,0f); Call(sight,"Update");
+        Check(!sight.IsPlayerDetected, "Guard range exceeds the agreed Easy footprint.");
         player.transform.position = new Vector3(1f,0f); Call(sight,"Update");
         director.State.Tick(2f,true,false,false);
         var response = guard.GetComponent<UXGuardResponse>(); Call(response,"Start");
@@ -236,6 +242,6 @@ public static class Level1FeatureChecks
         int easy = ExposureHealth(UXDifficulty.Easy), hard = ExposureHealth(UXDifficulty.Hard);
         Check(hard < easy && hard > 0, "Hard did not increase guard pressure while retaining a recovery window.");
         return "same 2.2-second exposure: Easy health " + easy + ", Hard health " + hard +
-            "; actual detector matches its mode-specific vision cone";
+            "; both detectors match the shared guard footprint, including angle/range boundaries";
     }
 }

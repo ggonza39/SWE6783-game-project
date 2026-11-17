@@ -8,6 +8,8 @@ public class PlayerController : MonoBehaviour
 
     private const string PreviewScenePath = "Assets/Scenes/UXFacilityPreview.unity";
     private bool defaultSneakStance;
+    private bool usesSprintReserve;
+    private bool sprintedLastStep;
 
     public bool IsSneaking => !IsSprinting && (defaultSneakStance || IsMovingCarefully);
     public bool IsMovingCarefully { get; private set; }
@@ -17,7 +19,15 @@ public class PlayerController : MonoBehaviour
         : (IsSprinting ? moveSpeed * sprintMultiplier : moveSpeed);
 
     private Rigidbody2D rb;
-    private Vector2 movement;
+    private Vector2 movement,blastDirection;
+    private float blastRemaining;
+    public void ApplyMineKnockback(Vector2 origin)
+    {
+        Vector2 away=(Vector2)transform.position-origin;
+        blastDirection=away.sqrMagnitude>.0001f?away.normalized:new Vector2(0,-1);
+        blastRemaining=.30f;IsSprinting=false;
+        if(usesSprintReserve)UXCampaign.FlushSprint();
+    }
 
     private void Awake()
     {
@@ -30,7 +40,9 @@ public class PlayerController : MonoBehaviour
             gameObject.AddComponent<BoxCollider2D>();
 
         defaultSneakStance = gameObject.scene.path == PreviewScenePath ||
-            gameObject.scene.path == "Assets/Scenes/UXFacilityExpanded.unity";
+            gameObject.scene.path == "Assets/Scenes/UXFacilityExpanded.unity" ||
+            gameObject.scene.path == UXCampaign.CrimsonScene;
+        usesSprintReserve=gameObject.scene.path==UXCampaign.FacilityScene || gameObject.scene.path==UXCampaign.CrimsonScene;
         if (defaultSneakStance)
             ConfigurePreviewCollider();
 
@@ -47,31 +59,56 @@ public class PlayerController : MonoBehaviour
             IsMovingCarefully = false;
             IsSprinting = false;
             rb.linearVelocity = Vector2.zero;
+            if(usesSprintReserve)UXCampaign.FlushSprint();
+            sprintedLastStep=false;
             return;
         }
 
         // C/Control adds slower precision steps; the preview is crouched by default.
         IsMovingCarefully = Input.GetKey(KeyCode.C) ||
             Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-        IsSprinting = !IsMovingCarefully &&
-            (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
-
         float horizontal = Input.GetAxisRaw("Horizontal");
         float vertical = Input.GetAxisRaw("Vertical");
-
         movement = new Vector2(horizontal, vertical).normalized;
+        IsSprinting = movement.sqrMagnitude>0f && !IsMovingCarefully &&
+            (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) &&
+            (!usesSprintReserve || (UXCampaign.Running && UXCampaign.SprintRemaining>0f));
     }
 
     private void FixedUpdate()
     {
-        if (GameManager.Instance != null && GameManager.Instance.GameEnded)
+        if(Time.timeScale<=0f || (GameManager.Instance!=null && GameManager.Instance.GameEnded))
         {
-            rb.linearVelocity = Vector2.zero;
-            return;
+            rb.linearVelocity=Vector2.zero;IsSprinting=false;blastRemaining=0f;
+            if(usesSprintReserve)UXCampaign.FlushSprint();
+            sprintedLastStep=false;return;
         }
-
-        rb.linearVelocity = movement * CurrentMoveSpeed;
+        if(blastRemaining>0f)
+        {
+            float dt=Mathf.Min(Time.fixedDeltaTime,blastRemaining);
+            Vector2 step=blastDirection*(6f*(blastRemaining/.30f)*dt);
+            var director=UXStealthDirector.Instance;
+            rb.linearVelocity=Vector2.zero;
+            if(director!=null)rb.MovePosition(director.ClampBlastTravel(rb.position,step));
+            blastRemaining=Mathf.Max(0f,blastRemaining-dt);
+            IsSprinting=false;sprintedLastStep=false;return;
+        }
+        float speed=CurrentMoveSpeed;
+        if(usesSprintReserve && IsSprinting && movement.sqrMagnitude>0f)
+        {
+            float dt=Time.fixedDeltaTime;
+            float paid=UXCampaign.SpendSprint(dt);
+            // Pay exactly for the final partial step; its remainder uses crouch speed.
+            float portion=dt>0f?paid/dt:0f;
+            speed=moveSpeed*(1f+(sprintMultiplier-1f)*portion);
+            IsSprinting=paid>0f && UXCampaign.SprintRemaining>0f;
+        }
+        if(usesSprintReserve && sprintedLastStep && !IsSprinting)UXCampaign.FlushSprint();
+        sprintedLastStep=IsSprinting;
+        rb.linearVelocity=movement*speed;
     }
+
+    private void OnDisable(){if(usesSprintReserve)UXCampaign.FlushSprint();}
 
     private void ConfigurePreviewCollider()
     {

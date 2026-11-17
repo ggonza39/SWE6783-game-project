@@ -22,6 +22,8 @@ public sealed class UXSolidHidingCover : MonoBehaviour
     public static void ConfigureScene(GameObject owner, BoxCollider2D playerBody = null)
     {
         var covers = new List<UXSolidHidingCover>();
+        UXSectorMission sectors=owner.GetComponent<UXSectorMission>();
+        SpriteRenderer[] sceneArt=FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None);
         foreach (GameObject spot in GameObject.FindGameObjectsWithTag("HidingSpot"))
         {
             if (spot.scene != owner.scene || spot.GetComponentInParent<UXSolidHidingCover>() != null) continue;
@@ -32,6 +34,17 @@ public sealed class UXSolidHidingCover : MonoBehaviour
             box.offset = Vector2.zero;
             box.size = new Vector2(0.98f / Mathf.Abs(spot.transform.lossyScale.x),
                 0.98f / Mathf.Abs(spot.transform.lossyScale.y));
+            if(sectors!=null && !sectors.IsHidingBay(spot.transform.position))
+            {
+                // Retain every crate as solid scenery; only the three refuges hide.
+                spot.name="CrimsonCoverBlock";
+                SpriteRenderer block=spot.GetComponent<SpriteRenderer>();
+                if(block!=null)block.color=new Color(.72f,.49f,.45f);
+                foreach(SpriteRenderer glow in sceneArt)
+                    if(glow.gameObject.name=="HidingGlow" && glow.gameObject.scene==owner.scene &&
+                        Vector2.Distance(glow.transform.position,spot.transform.position)<.75f)glow.enabled=false;
+                continue;
+            }
             covers.Add(spot.AddComponent<UXSolidHidingCover>());
         }
         Physics2D.SyncTransforms();

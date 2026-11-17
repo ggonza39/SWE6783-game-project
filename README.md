@@ -1,22 +1,44 @@
 # SWE6783-game-project: Pixel Rebellion — Shadow Protocol
 
-## Level 1 modes and saved progress — November 14, 2026
+## Two-level campaign candidate — November 15, 2026
 
 Open `src` with **Unity 6000.2.2f1**, then open
-`Assets/Scenes/UXFacilityExpanded.unity` and select **Play → Easy/Hard → Start Level 1 → Deploy**.
+`Assets/Scenes/UXFacilityExpanded.unity` and press Play. Choose **Easy Mode** or
+**Hard Mode**, then **Start Game** or **Continue**. Existing Level 1 clears unlock
+Level 2 automatically when their saved records migrate.
 
-- **Mission:** collect the gold keycard, download three evidence caches, hack the terminal, then extract.
-- **Controls:** WASD/arrows move crouched; C/CTRL extra slow; SHIFT sprint; hold E to download/hack; hold TAB for the blueprint; ESC pause; R restart confirmation.
-- **Security:** marked cover conceals the player. Full detection starts pursuit; breaking sight and hiding lets search clear. Health does not regenerate.
-- **Difficulty:** Easy has slower patrols and more forgiving detection. Hard has faster patrol/pursuit, wider detection, three-hit failure, five-second data downloads, eight-second hacks, and one required eight-second exit door; the alternative entrance is sealed.
-- **Saved progress:** selected mode, display/control-reminder settings, completed runs, and best successful time per mode are stored on the current device. Retry starts a fresh mission and retains completed-run records.
-- **Status:** the supplied Windows recording completes Easy and the first Hard preset. The stronger Hard revision has isolated route/rule checks and needs a fresh Unity balance playtest before committing or rebuilding.
+- **Level 1 / Facility Breach:** keycard, three caches, security hack and extraction.
+  The approved stronger Hard challenge and required exit door are retained.
+- **Level 2 / Crimson Depths:** a 55×33 dark red industrial complex with Docks,
+  Archives and Reactor Vault; 12 guards, 12 cameras, nine caches and three local
+  camera consoles. Twenty-four concealed proximity mines and six cycling laser barriers add
+  timing hazards; sector hacks neutralize their local traps. Only one hiding bay
+  remains in each sector; other containers are solid cover. The checked
+  clear-floor grid is 4.13× Level 1's size.
+- **Campaign:** Level 1 extraction automatically enters Level 2. Menu Continue
+  and Replay after death restore
+  the latest secured sector/checkpoint with earlier level clears intact. Both
+  modes retain separate progress and best mission times.
+- **Sprint:** a non-refilling 10-second reserve per level, equal in Easy and Hard.
+  Death replays restore full health and stamina at the secured checkpoint; empty reserves leave crouched movement during an attempt.
+- **Controls:** WASD/arrows move crouched; C/CTRL extra slow; SHIFT sprint; hold E
+  to download/hack; hold TAB for the map; ESC pause; R opens Restart Level.
+- **Restart:** Restart Level preserves earlier clears and records. The main-menu
+  Restart Game confirmation erases both modes' campaign progress and records,
+  while retaining display/control settings and the anonymous player identifier.
+- **Status:** isolated campaign, persistence, route, UI and regression checks are
+  supplied. Unity import, engine playtesting, balance and builds are the next
+  acceptance step; this source candidate is not a published build.
 
-See [Level 1 difficulty and saving](docs/Level1_Difficulty_And_Saving.md) for mode
-timings, the required Hard exit door, saved-data behavior, and the acceptance pass.
+See [Crimson campaign and acceptance](docs/Crimson_Campaign.md) for checkpoints,
+migration, telemetry, validation and Unity playtest steps. The [Level 1 notes](docs/Level1_Difficulty_And_Saving.md)
+and [demo handoff](docs/UX_EXPANDED_LEVEL1_DEMO.md) retain the earlier review context.
 
-See [the demo handoff and recording plan](docs/UX_EXPANDED_LEVEL1_DEMO.md) for the
-verified behavior, remaining checks and team review responsibilities.
+
+The latest impact polish makes active lasers lethal in both modes, adds explicit
+mine/laser/guard death feedback, a recorded death replay and progressive green/yellow/red sprint colors.
+Hard mines now leave 15 health from full with a 1.10s fuse. Hard extraction gains
+industrial machinery detail and an animated lift signal; see the campaign guide.
 
 ## Team Name
 - Pixel Rebellion
@@ -71,3 +93,11 @@ Rather than relying on overly complex mechanics, the project focuses on user int
 - `/src` — Core Unity source project directory (Assets, Scenes, Prefabs, and C# Scripts)
 - `/builds` — Compiled Unity WebGL exports ready for deployment
 - `/tests` — Automated testing scripts, playtesting logs, and usability evaluation plans
+
+The replay/death-effects fix corrects vertical playback orientation and separates
+guard blood-pool deaths, mine explosions and laser burns. Mine blast radius is
+now 2.4 units in both modes (25% smaller); fuse and damage values are retained.
+
+Replay clarity now uses a higher-resolution20Hz color archive, camera-style frame
+and recorded timestamps. A separate action deck keeps checkpoint Replay and Main
+Menu visibly outside the footage. See the campaign guide for Unity acceptance.

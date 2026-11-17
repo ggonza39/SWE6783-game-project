@@ -48,7 +48,7 @@ public sealed class UXDeluxeSpriteAnimator : MonoBehaviour
 
         if (!isGuard)
             LoadSneakFrames();
-        else if (gameObject.scene.name == "UXFacilityExpanded")
+        else if (gameObject.scene.name == "UXFacilityExpanded" || gameObject.scene.name == "UXCrimsonDepths")
             armedFrames = LoadAtlas("guard_armed_sheet", "GuardArmed");
 
         // The existing procedural animator automatically attaches to Player/Guard.

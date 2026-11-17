@@ -59,10 +59,11 @@ loop; completing objectives and reaching extraction remain the player's goals.
 folder. It stores the selected difficulty, fullscreen preference, optional
 control reminders, completion counts, and best successful time for each mode.
 Stable level IDs allow future missions to add records without replacing Level 1.
-The current update contains one playable level.
+The original Level 1 update contained one playable level; the current campaign
+adds Crimson Depths. See [campaign behavior](Crimson_Campaign.md) for schema-2
+checkpoints, continuation and restart scope.
 
-This is completion/settings persistence, not a mid-mission checkpoint. Closing
-or retrying an unfinished run starts that mission again. The existing anonymous
+Level 1 resumes at its entry; Level 2 now has secured-sector checkpoints. The existing anonymous
 player ID and telemetry files are retained. Telemetry records the actual mode
 chosen at the start of each session.
 

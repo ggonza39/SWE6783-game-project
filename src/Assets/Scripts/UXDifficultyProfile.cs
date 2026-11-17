@@ -27,7 +27,7 @@ public sealed class UXDifficultyProfile
     private static readonly UXDifficultyProfile Easy = new UXDifficultyProfile(
         UXDifficulty.Easy, 0.85f, 0.90f, 0.95f, 0.85f, 0.95f, 0.90f, 0.85f, 0.90f, 0.75f);
     private static readonly UXDifficultyProfile Hard = new UXDifficultyProfile(
-        UXDifficulty.Hard, 1.55f, 1.50f, 1.30f, 1.45f, 1.15f, 1.50f, 1.30f, 1.40f, 1.80f);
+        UXDifficulty.Hard, 1.55f, 1.50f, 0.95f, 0.85f, 1.15f, 1.50f, 1.30f, 1.40f, 1.80f);
 
     public static UXDifficultyProfile For(UXDifficulty mode) => mode == UXDifficulty.Hard ? Hard : Easy;
 }

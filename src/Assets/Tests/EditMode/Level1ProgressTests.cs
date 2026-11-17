@@ -58,7 +58,7 @@ public sealed class Level1ProgressTests
     [Test]
     public void NewerSaveVersionIsNeverReplacedByThisVersion()
     {
-        const string future = "{\"gameId\":\"PixelRebellion\",\"schemaVersion\":2,\"futureProgress\":123}";
+        string future = "{\"gameId\":\"PixelRebellion\",\"schemaVersion\":"+(UXPlayerSaveData.CurrentVersion+1)+",\"futureProgress\":123}";
         File.WriteAllText(path, future);
         var save = new UXProgressStore(path);
         save.Data.RecordCompletion("facility_01", UXDifficulty.Easy, 100f);
