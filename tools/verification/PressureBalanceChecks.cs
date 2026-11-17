@@ -25,7 +25,7 @@ public static class PressureBalanceChecks
         Check(UXCrimsonHazards.MinePositions.Length==24 && UXCrimsonHazards.MinesPerSector==8,"Mine count did not double evenly.");
         for(int a=0;a<24;a++)for(int b=a+1;b<24;b++)
             Check(Vector2.Distance(UXCrimsonHazards.MinePositions[a],UXCrimsonHazards.MinePositions[b])>5.4f,"Mine spacing creates an immediate second trigger during the first escape.");
-        return "24 concealed mines / 8 per sector; 2.4 radius; 10s equal-mode reserve; 3 hiding bays and 19 solid retained crates; all four checkpoint saves remain safe with CP2/3 sharing the Vault refuge; map/prompt deduplication; schema3 spent fraction migration";
+        return "24 concealed mines / 8 per sector; 2.4 radius; 20s Level 2 equal-mode reserve; 3 hiding bays and 19 solid retained crates; all four checkpoint saves remain safe with CP2/3 sharing the Vault refuge; map/prompt deduplication; schema3 spent fraction migration";
     }
     private static void Migration(string output)
     {
@@ -35,11 +35,11 @@ public static class PressureBalanceChecks
             "{\"mode\":1,\"levelId\":\"crimson_02\",\"checkpoint\":1,\"sprintSeconds\":0}]}";
         string path=Path.Combine(output,"old-24-second-save.json");File.WriteAllText(path,json);var store=new UXProgressStore(path);
         var easy=store.Data.FindCampaign(UXDifficulty.Easy);var hard=store.Data.FindCampaign(UXDifficulty.Hard);
-        Check(store.Data.schemaVersion==4 && easy.sprintSeconds==5f && hard.sprintSeconds==0f,"Migration refunded or erased the spent resource fraction.");
+        Check(store.Data.schemaVersion==UXPlayerSaveData.CurrentVersion && easy.sprintSeconds==15f && hard.sprintSeconds==10f,"Migration refunded or erased the spent resource fraction.");
         Check(easy.checkpoint==3 && easy.seconds==121 && easy.detections==5 && !store.Data.fullscreen &&
             store.Data.FindLevel("facility_01").bestEasySeconds==111,"Migration lost checkpoint/record/settings.");
         Check(store.Save() && File.ReadAllText(path+".bak")==json,"Original 24s save backup missing.");
-        store=new UXProgressStore(path);Check(store.Data.FindCampaign(UXDifficulty.Easy).sprintSeconds==5f && store.Data.FindCampaign(UXDifficulty.Hard).sprintSeconds==0f,"Reload applied scaling twice.");
+        store=new UXProgressStore(path);Check(store.Data.FindCampaign(UXDifficulty.Easy).sprintSeconds==15f && store.Data.FindCampaign(UXDifficulty.Hard).sprintSeconds==10f,"Reload applied scaling twice.");
     }
     private static void SparseCover(string json,string output)
     {

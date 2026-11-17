@@ -37,7 +37,7 @@ public static class SprintConcealChecks
     {
         geometry=json;directory=output;Directory.CreateDirectory(output);
         Migration();DrainAndPersistence();SaveFailure();HiddenMines();Hud();
-        return "schema1/2/3 migration retains records/checkpoints; same 10s bank in both modes; physics-time drain and partial final step; idle/pause/holds do not drain; no recharge; checkpoints retain spent stamina; death/replay restores full stamina; new level/restart refill; hidden-before-trigger hardware; larger blast; responsive reserve meter";
+        return "schema1/2/3 migration retains records/checkpoints; same 20s Level 2 bank in both modes; physics-time drain and partial final step; idle/pause/holds do not drain; no recharge; checkpoints retain spent stamina; death/replay restores full stamina; new level/restart refill; hidden-before-trigger hardware; larger blast; responsive reserve meter";
     }
     private static void Migration()
     {
@@ -48,7 +48,7 @@ public static class SprintConcealChecks
         var slot=store.Data.FindCampaign(UXDifficulty.Hard);
         Check(store.Data.schemaVersion==UXPlayerSaveData.CurrentVersion && slot.checkpoint==2 && slot.seconds==75 && slot.detections==3 &&
             store.Data.FindLevel("facility_01").bestHardSeconds==121 && !store.Data.fullscreen && !store.Data.showControlHints,"Migration lost prior progress/settings.");
-        Near(slot.sprintSeconds,UXSprintReserve.CapacitySeconds,"Migration failed to grant the initial resource");Check(store.Save()&&File.ReadAllText(path+".bak")==legacy,"Original save was not backed up.");
+        Near(slot.sprintSeconds,UXSprintReserve.CrimsonCapacitySeconds,"Migration failed to grant the initial resource");Check(store.Save()&&File.ReadAllText(path+".bak")==legacy,"Original save was not backed up.");
         slot.sprintSeconds=0f;Check(store.Save(),"Could not save exhaustion.");store=new UXProgressStore(path);Near(store.Data.FindCampaign(UXDifficulty.Hard).sprintSeconds,0f,"Reload replenished empty bank.");
         slot=new UXCampaignSlot{sprintSeconds=-1f};Check(!slot.Validate(),"Negative bank accepted.");slot.sprintSeconds=float.NaN;Check(!slot.Validate(),"Nonfinite bank accepted.");
     }
@@ -56,27 +56,27 @@ public static class SprintConcealChecks
     {
         foreach(var mode in new[]{UXDifficulty.Easy,UXDifficulty.Hard})
         {
-            World(mode,1);Near(UXCampaign.SprintRemaining,UXSprintReserve.CapacitySeconds,"Mode has a different reserve");
-            for(int i=0;i<50;i++)MoveStep(1,true);Near(UXCampaign.SprintRemaining,UXSprintReserve.CapacitySeconds-1f,"One physics second did not cost one stamina second");
+            World(mode,1);Near(UXCampaign.SprintRemaining,UXSprintReserve.CrimsonCapacitySeconds,"Mode has a different reserve");
+            for(int i=0;i<50;i++)MoveStep(1,true);Near(UXCampaign.SprintRemaining,UXSprintReserve.CrimsonCapacitySeconds-1f,"One physics second did not cost one stamina second");
             Near(player.GetComponent<Rigidbody2D>().linearVelocity.magnitude,4.9f,"Sprinting speed changed");
-            for(int i=0;i<500;i++)MoveStep(0,true);Near(UXCampaign.SprintRemaining,UXSprintReserve.CapacitySeconds-1f,"Holding Shift while idle drained reserve");
-            for(int i=0;i<50;i++)MoveStep(1,true,true);Near(UXCampaign.SprintRemaining,UXSprintReserve.CapacitySeconds-1f,"Precision crouch charged sprint");
-            Time.timeScale=0;for(int i=0;i<50;i++)MoveStep(1,true);Near(UXCampaign.SprintRemaining,UXSprintReserve.CapacitySeconds-1f,"Pause drained reserve");Time.timeScale=1;
-            for(int i=0;i<300;i++)MoveStep(1,false);Near(UXCampaign.SprintRemaining,UXSprintReserve.CapacitySeconds-1f,"Waiting/crouching refilled reserve");
+            for(int i=0;i<500;i++)MoveStep(0,true);Near(UXCampaign.SprintRemaining,UXSprintReserve.CrimsonCapacitySeconds-1f,"Holding Shift while idle drained reserve");
+            for(int i=0;i<50;i++)MoveStep(1,true,true);Near(UXCampaign.SprintRemaining,UXSprintReserve.CrimsonCapacitySeconds-1f,"Precision crouch charged sprint");
+            Time.timeScale=0;for(int i=0;i<50;i++)MoveStep(1,true);Near(UXCampaign.SprintRemaining,UXSprintReserve.CrimsonCapacitySeconds-1f,"Pause drained reserve");Time.timeScale=1;
+            for(int i=0;i<300;i++)MoveStep(1,false);Near(UXCampaign.SprintRemaining,UXSprintReserve.CrimsonCapacitySeconds-1f,"Waiting/crouching refilled reserve");
             UXCampaign.SpendSprint(2.35f);UXCampaign.FlushSprint();float remaining=UXCampaign.SprintRemaining;
             Check(UXCampaign.SecureSector(2),"Checkpoint failed");Near(UXCampaign.SprintRemaining,remaining,"Hack refilled reserve");
             UXCampaign.RecordDeath();string path=Path.Combine(directory,"reserve-"+(profile-1)+".json");
             Campaign("Profile",path);UXCampaign.PrepareContinue();UXCampaign.Begin(UXCampaign.CrimsonLevelId,mode);
-            Near(UXCampaign.SprintRemaining,UXSprintReserve.CapacitySeconds,"Death Replay failed to refill");remaining=UXSprintReserve.CapacitySeconds;
+            Near(UXCampaign.SprintRemaining,UXSprintReserve.CrimsonCapacitySeconds,"Death Replay failed to refill");remaining=UXSprintReserve.CrimsonCapacitySeconds;
             UXCampaign.SpendSprint(remaining-.01f);MoveStep(1,true);
             Near(UXCampaign.SprintRemaining,0,"Last partial step did not empty bank");
             Near(player.GetComponent<Rigidbody2D>().linearVelocity.magnitude,2.8f*1.375f,"Partial step granted unpaid sprint distance");
             MoveStep(1,true);Check(!player.IsSprinting&&player.IsSneaking,"Exhaustion did not restore crouched stance");
             Near(player.GetComponent<Rigidbody2D>().linearVelocity.magnitude,2.8f,"Exhaustion blocked normal crouched movement");
-            UXCampaign.RecordDeath();Campaign("Profile",path);UXCampaign.Begin(UXCampaign.CrimsonLevelId,mode);Near(UXCampaign.SprintRemaining,UXSprintReserve.CapacitySeconds,"Empty Replay failed to refill");
-            UXCampaign.RestartLevel(UXCampaign.CrimsonLevelId,mode);UXCampaign.Begin(UXCampaign.CrimsonLevelId,mode);Near(UXCampaign.SprintRemaining,UXSprintReserve.CapacitySeconds,"Fresh level restart has no usable reserve");
+            UXCampaign.RecordDeath();Campaign("Profile",path);UXCampaign.Begin(UXCampaign.CrimsonLevelId,mode);Near(UXCampaign.SprintRemaining,UXSprintReserve.CrimsonCapacitySeconds,"Empty Replay failed to refill");
+            UXCampaign.RestartLevel(UXCampaign.CrimsonLevelId,mode);UXCampaign.Begin(UXCampaign.CrimsonLevelId,mode);Near(UXCampaign.SprintRemaining,UXSprintReserve.CrimsonCapacitySeconds,"Fresh level restart has no usable reserve");
             UXCampaign.Begin(UXPlayerProgress.FacilityLevelId,mode);UXCampaign.SpendSprint(UXSprintReserve.CapacitySeconds);UXCampaign.Complete(UXPlayerProgress.FacilityLevelId,mode,10);
-            UXCampaign.Begin(UXCampaign.CrimsonLevelId,mode);Near(UXCampaign.SprintRemaining,UXSprintReserve.CapacitySeconds,"New level inherited previous level's exhaustion");
+            UXCampaign.Begin(UXCampaign.CrimsonLevelId,mode);Near(UXCampaign.SprintRemaining,UXSprintReserve.CrimsonCapacitySeconds,"New level inherited previous level's exhaustion");
         }
     }
     private static void SaveFailure()
@@ -89,7 +89,7 @@ public static class SprintConcealChecks
         string temp=blocked+".tmp";DateTime sentinel=new DateTime(2001,1,1,0,0,0,DateTimeKind.Utc);File.SetLastWriteTimeUtc(temp,sentinel);
         for(int i=0;i<100;i++)UXCampaign.FlushSprint();
         Check(File.GetLastWriteTimeUtc(temp)==sentinel,"Failed save retried every frame instead of waiting.");
-        Near(UXCampaign.SprintRemaining,UXSprintReserve.CapacitySeconds-2f,"Save failure refilled in-memory resource.");
+        Near(UXCampaign.SprintRemaining,UXSprintReserve.CrimsonCapacitySeconds-2f,"Save failure refilled in-memory resource.");
     }
 
     private static bool MineHardware(SpriteRenderer s)=>s.gameObject.name=="Mine_Casing" || s.gameObject.name=="Mine_Caution" ||
@@ -107,7 +107,7 @@ public static class SprintConcealChecks
         director.Player.position=mine+new Vector2(2f,0);Set(hazard,"previousPlayer",(Vector2)director.Player.position);
         for(int i=0;i<90;i++){Time.deltaTime=.02f;director.State.Tick(.02f,false,false,false);Call(hazard,"Update");}
         Check(director.State.Health==40,"Larger radius did not hit a previously safe 2-unit position.");
-        World(UXDifficulty.Hard);UXCampaign.SpendSprint(UXSprintReserve.CapacitySeconds);hazard=director.Hazards;mine=UXCrimsonHazards.MinePositions[0];
+        World(UXDifficulty.Hard);UXCampaign.SpendSprint(UXSprintReserve.CrimsonCapacitySeconds);hazard=director.Hazards;mine=UXCrimsonHazards.MinePositions[0];
         director.Player.position=mine;Set(hazard,"previousPlayer",mine);Time.deltaTime=.02f;Call(hazard,"Update");
         Check(hazard.Warning.Contains("BACK AWAY"),"Empty-bank warning still orders an unavailable sprint.");
         hazard.Begin(UXDifficulty.Hard,2);Check(Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None).Where(MineHardware).All(s=>!s.enabled),"Replay or neutralization reveals hidden mines.");
@@ -115,9 +115,9 @@ public static class SprintConcealChecks
     private static void Hud()
     {
         World(UXDifficulty.Hard);var hud=new GameObject("HUD").AddComponent<UXHUDController>();Call(hud,"Awake");Call(hud,"Start");Set(hud,"briefingVisible",false);
-        foreach(int width in new[]{640,960,1280,1920,2560})foreach(float left in new[]{UXSprintReserve.CapacitySeconds,3f,0f})
+        foreach(int width in new[]{640,960,1280,1920,2560})foreach(float left in new[]{UXSprintReserve.CrimsonCapacitySeconds,3f,0f})
         {
-            UXCampaign.RestartLevel(UXCampaign.CrimsonLevelId,UXDifficulty.Hard);UXCampaign.Begin(UXCampaign.CrimsonLevelId,UXDifficulty.Hard);UXCampaign.SpendSprint(UXSprintReserve.CapacitySeconds-left);
+            UXCampaign.RestartLevel(UXCampaign.CrimsonLevelId,UXDifficulty.Hard);UXCampaign.Begin(UXCampaign.CrimsonLevelId,UXDifficulty.Hard);UXCampaign.SpendSprint(UXSprintReserve.CrimsonCapacitySeconds-left);
             Screen.width=width;Screen.height=width*9/16;GUI.Calls.Clear();Call(hud,"DrawHUD");
             foreach(var c in GUI.Calls)Check(c.X>=-1 && c.Y>=-1 && c.W>=0 && c.X+c.W<=Screen.width+1 && c.Y+c.H<=Screen.height+1,"Reserve HUD overflow: "+c.Text);
             Check(GUI.Calls.Any(c=>c.Text!=null&&c.Text.StartsWith("SPRINT  ")),"Resource meter label absent");

@@ -18,7 +18,7 @@ public sealed class UXLevelRecord
 [Serializable]
 public sealed class UXPlayerSaveData
 {
-    public const int CurrentVersion = 4;
+    public const int CurrentVersion = 5;
     public int schemaVersion = CurrentVersion;
     public string gameId = "PixelRebellion";
     public UXDifficulty difficulty = UXDifficulty.Easy;
@@ -36,6 +36,7 @@ public sealed class UXPlayerSaveData
         bool migrate = schemaVersion == 1;
         bool initializeSprint = schemaVersion < 3;
         bool rebalanceSprint = schemaVersion == 3;
+        bool expandCrimsonSprint = schemaVersion < 5;
         if (!Enum.IsDefined(typeof(UXDifficulty), difficulty)) difficulty = UXDifficulty.Easy;
         if (levels == null) levels = new List<UXLevelRecord>();
         var ids = new HashSet<string>();
@@ -62,11 +63,17 @@ public sealed class UXPlayerSaveData
         foreach (UXCampaignSlot slot in campaigns)
         {
             if(slot==null)return false;
-            if(initializeSprint)slot.sprintSeconds=UXSprintReserve.CapacitySeconds;
+            if(initializeSprint)slot.sprintSeconds=UXCampaign.CapacityForLevel(slot.levelId);
             if(rebalanceSprint)
             {
                 if(!ValidTime(slot.sprintSeconds) || slot.sprintSeconds>24f)return false;
                 slot.sprintSeconds=slot.sprintSeconds*(UXSprintReserve.CapacitySeconds/24f);
+            }
+            if(expandCrimsonSprint && !initializeSprint && slot.levelId==UXCampaign.CrimsonLevelId)
+            {
+                if(!ValidTime(slot.sprintSeconds) || slot.sprintSeconds>UXSprintReserve.CapacitySeconds)return false;
+                // Grant only the extra budget once; retain the seconds already spent.
+                slot.sprintSeconds+=UXSprintReserve.CrimsonCapacitySeconds-UXSprintReserve.CapacitySeconds;
             }
             if(!slot.Validate() || !modes.Add(slot.mode))return false;
         }

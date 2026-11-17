@@ -755,7 +755,7 @@ public class UXHUDController : MonoBehaviour
 
     private void DrawSprintReserve(float y,float s)
     {
-        float left=UXCampaign.SprintRemaining,ratio=left/UXSprintReserve.CapacitySeconds;
+        float left=UXCampaign.SprintRemaining,ratio=left/UXCampaign.SprintCapacity;
         ratio=Mathf.Clamp01(ratio);
         Color tint=StaminaTint(ratio);
         float p=14f*s,label=158f*s,copy=250f*s;

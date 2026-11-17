@@ -62,19 +62,19 @@ public static class MissionEffectsChecks
             var original=Enumerable.Range(0,24).Select(first.Hazards.MinePosition).ToArray();
             UXCampaign.SpendSprint(3f);UXCampaign.SaveClock();UXCampaign.PrepareContinue();
             Campaign("Build",mode,1,false);first=UXStealthDirector.Instance;
-            Check(UXCampaign.SprintRemaining==7f && UXCampaign.MineSeed==seed &&
+            Check(UXCampaign.SprintRemaining==17f && UXCampaign.MineSeed==seed &&
                 Enumerable.Range(0,24).All(i=>Vector2.Distance(original[i],first.Hazards.MinePosition(i))<.001f),
                 "Live Continue refunded resources or rerolled mines.");
-            UXCampaign.SpendSprint(7f);UXCampaign.RecordDeath();UXCampaign.PrepareContinue();
+            UXCampaign.SpendSprint(17f);UXCampaign.RecordDeath();UXCampaign.PrepareContinue();
             Campaign("Build",mode,1,false);first=UXStealthDirector.Instance;
-            Check(first.State.Health==100 && UXCampaign.SprintRemaining==10f && UXCampaign.MineSeed!=seed &&
+            Check(first.State.Health==100 && UXCampaign.SprintRemaining==20f && UXCampaign.MineSeed!=seed &&
                 Enumerable.Range(0,24).Count(i=>Vector2.Distance(original[i],first.Hazards.MinePosition(i))>.01f)>=16,
                 "Death Replay failed to refill or shuffle mines.");
             Check(UXCampaign.SelectedSlot.checkpoint==1 && Enumerable.Range(0,8).All(i=>first.Hazards.MineState(i).Neutralized),
                 "Replay lost its secured checkpoint.");
-            UXCampaign.SpendSprint(10f);UXCampaign.PrepareReplay();
+            UXCampaign.SpendSprint(20f);UXCampaign.PrepareReplay();
             Campaign("Build",mode,1,false);
-            Check(UXCampaign.SprintRemaining==10f,"Explicit Replay did not repair an older exhausted save.");
+            Check(UXCampaign.SprintRemaining==20f,"Explicit Replay did not repair an older exhausted save.");
         }
     }
 
@@ -134,10 +134,10 @@ public static class MissionEffectsChecks
         Check(Math.Abs(a.r - b.r) < .01f && Math.Abs(a.g - b.g) < .01f, "Stamina tint jumps at halfway.");
         foreach (UXDifficulty mode in new[] { UXDifficulty.Easy, UXDifficulty.Hard })
         {
-            World(mode); foreach (int width in new[] { 640, 960, 1280, 1920, 2560 }) foreach (float reserve in new[] { 10f, 5f, 2f, 0f })
+            World(mode); foreach (int width in new[] { 640, 960, 1280, 1920, 2560 }) foreach (float reserve in new[] { 20f, 10f, 4f, 0f })
             {
                 Screen.width = width; Screen.height = width * 9 / 16;
-                typeof(UXCampaign).GetProperty("Sprint").SetValue(null, new UXSprintReserve(reserve));
+                typeof(UXCampaign).GetProperty("Sprint").SetValue(null, new UXSprintReserve(reserve, UXSprintReserve.CrimsonCapacitySeconds));
                 GUI.Calls.Clear(); Call(hud, "DrawHUD"); Bounds();
                 Check(GUI.Calls.Any(c => c.Text == "SPRINT  " + reserve.ToString("0.0") + "s"), "Sprint numeric readout missing.");
                 File.WriteAllText(Path.Combine(output, "stamina_" + mode + "_" + width + "_" + reserve + ".json"), JsonSerializer.Serialize(GUI.Calls, new JsonSerializerOptions { IncludeFields = true }));
@@ -210,7 +210,7 @@ public static class MissionEffectsChecks
         }
         GUI.ButtonClick=t=>t=="WATCH AGAIN";Call(hud,"OnGUI");GUI.ButtonClick=null;
         Check(replay.CurrentFrame.CaptureStamp==oldest && UnityEngine.SceneManagement.SceneManager.LastRequestedScene==scene,"Watch Again changed campaign state.");
-        Check(UXCampaign.SelectedSlot.checkpoint==2 && UXCampaign.SprintRemaining==7.5f,"Watching replay changed checkpoint or sprint.");
+        Check(UXCampaign.SelectedSlot.checkpoint==2 && UXCampaign.SprintRemaining==17.5f,"Watching replay changed checkpoint or sprint.");
         GUI.ButtonClick=t=>t=="REPLAY";Call(hud,"OnGUI");GUI.ButtonClick=null;
         Check(UnityEngine.SceneManagement.SceneManager.LastRequestedScene==UXCampaign.CrimsonScene && UXCampaign.SelectedSlot.checkpoint==2,"Checkpoint Replay changed recovery.");
         var textures=Object.FindObjectsByType<RenderTexture>(FindObjectsSortMode.None).Where(t=>t.name=="Death_Replay_Frame").ToArray();

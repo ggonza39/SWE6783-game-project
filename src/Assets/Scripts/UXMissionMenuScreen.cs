@@ -52,61 +52,91 @@ public sealed class UXMissionMenuScreen
         GUI.color = Ink;
         GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
         GUI.color = previous;
-        for (float x = 0f; x < 1280f; x += 40f)
-            Fill(new Rect(x, 0f, 1f, 800f), new Color(0.10f, 0.28f, 0.35f, 0.25f));
-        for (float y = 0f; y < 800f; y += 40f)
-            Fill(new Rect(0f, y, 1280f, 1f), new Color(0.10f, 0.28f, 0.35f, 0.25f));
-        Label(new Rect(48f, 38f, 900f, 30f), "REBEL NETWORK  /  OPERATIONS", 14, Cyan, true);
-        Label(new Rect(46f, 85f, 1188f, 65f), "PIXEL REBELLION", 46, Color.white, true);
-        Label(new Rect(48f, 156f, 1100f, 28f),
-            settingsVisible ? "SHADOW PROTOCOL  /  SETTINGS" : "SHADOW PROTOCOL  /  SELECT YOUR APPROACH", 16, Muted);
+        Label(new Rect(46f, 65f, 1188f, 65f), "PIXEL REBELLION", 46, Color.white, true);
+        Label(new Rect(48f, 140f, 1100f, 28f),
+            settingsVisible ? "SHADOW PROTOCOL  /  SETTINGS" : "SHADOW PROTOCOL", 16, Muted);
 
         if(resetVisible) DrawReset();
         else if (settingsVisible) DrawSettings();
         else DrawHome();
 
         Fill(new Rect(48f, 691f, 1184f, 1f), new Color(0.12f, 0.35f, 0.43f));
-        Label(new Rect(48f, 711f, 1184f, 25f), ErrorNotice??UXPlayerProgress.Store.Status, 12,
-            ErrorNotice!=null||UXPlayerProgress.Store.HasSaveError ? Gold : Green, true);
+        if (ErrorNotice != null || UXPlayerProgress.Store.HasSaveError)
+            Label(new Rect(48f, 706f, 1184f, 25f), ErrorNotice ?? UXPlayerProgress.Store.Status, 12, Gold, true);
         Label(new Rect(48f, 746f, 1184f, 23f), resetVisible?"ESC / ENTER: CANCEL":settingsVisible ? "ESC: BACK TO MENU" :
-            "ARROWS: DIFFICULTY     ENTER: START / CONTINUE", 12, Muted);
+            "ARROWS: DIFFICULTY     ENTER: NEW GAME / CONTINUE", 12, Muted);
     }
 
     private void DrawHome()
     {
-        UXCampaignSlot slot=UXCampaign.SelectedSlot;
-        bool crimson=slot!=null && slot.levelId==UXCampaign.CrimsonLevelId;
-        Rect mission = new Rect(48f, 212f, 488f, 425f);
-        Fill(mission, Panel); Border(mission, new Color(0.12f, 0.35f, 0.43f));
-        Label(new Rect(72f, 234f, 440f, 28f), crimson?"OPERATION 02":"OPERATION 01", 14, Cyan, true);
-        Label(new Rect(72f, 278f, 440f, 43f), crimson?"CRIMSON DEPTHS":"FACILITY BREACH", 28, Color.white, true);
-        Label(new Rect(72f, 338f, 432f, 75f),
-            crimson?"Secure the sector data.\nOverride security. Reach extraction.":
-            "Secure the keycard and evidence.\nHack security. Reach extraction.", 19, Muted);
-        Label(new Rect(72f, 434f, 440f, 22f), "SAVED MISSION RECORDS", 12, Cyan, true);
-        Label(new Rect(72f, 463f, 440f, 22f), RecordLabel(UXPlayerProgress.Data.difficulty,UXPlayerProgress.FacilityLevelId,"LEVEL 1"), 15, Green, true);
-        Label(new Rect(72f, 488f, 440f, 22f), RecordLabel(UXPlayerProgress.Data.difficulty,UXCampaign.CrimsonLevelId,"LEVEL 2"), 15, Green, true);
-        Label(new Rect(72f, 512f, 440f, 20f),slot==null?"NEW CAMPAIGN":
-            (slot.completed?"CAMPAIGN COMPLETE":crimson?"CHECKPOINT "+slot.checkpoint+" / 3":"LEVEL 1 / ENTRY CHECKPOINT"),12,Muted,true);
-        if (Button(new Rect(72f, 538f, 440f, 52f), slot==null?"START GAME  >":
-            (slot.completed?"REPLAY LEVEL 2  >":"CONTINUE  >"), true)) ActivatePrimary();
-        if(Button(new Rect(72f, 601f, 440f, 28f),"RESTART GAME")){resetVisible=true;resetError=null;}
+        UXCampaignSlot slot = UXCampaign.SelectedSlot;
+        bool completed = slot != null && slot.completed;
+        bool levelTwo = slot != null && slot.levelId == UXCampaign.CrimsonLevelId;
+        Label(new Rect(48f, 210f, 1184f, 24f), "CAMPAIGN", 14, Cyan, true);
+        DrawLevelCard(new Rect(48f, 246f, 572f, 224f), false, slot);
+        DrawLevelCard(new Rect(660f, 246f, 572f, 224f), true, slot);
 
-        Label(new Rect(560f, 222f, 672f, 34f), "CHOOSE YOUR DIFFICULTY", 22, Color.white, true);
-        DrawDifficultyCard(new Rect(560f, 278f, 672f, 96f), UXDifficulty.Easy, Cyan);
-        DrawDifficultyCard(new Rect(560f, 400f, 672f, 96f), UXDifficulty.Hard, Gold);
-        if (Button(new Rect(560f, 546f, 324f, 52f), "SETTINGS")) settingsVisible = true;
-        if (!Application.isEditor && Button(new Rect(908f, 546f, 324f, 52f), "EXIT GAME")) Application.Quit();
-        Label(new Rect(560f, 611f, 672f, 25f), "COMPLETION AND BEST TIME ARE SAVED FOR EACH MODE", 11, Muted, true);
+        Label(new Rect(48f, 494f, 572f, 24f), "CHOOSE YOUR DIFFICULTY", 18, Color.white, true);
+        DrawDifficultyCard(new Rect(48f, 530f, 260f, 66f), UXDifficulty.Easy, Cyan);
+        DrawDifficultyCard(new Rect(328f, 530f, 260f, 66f), UXDifficulty.Hard, Gold);
+        if (Button(new Rect(48f, 614f, 260f, 42f), "SETTINGS")) settingsVisible = true;
+        if (!Application.isEditor && Button(new Rect(328f, 614f, 260f, 42f), "EXIT GAME"))
+            Application.Quit();
+
+        string action = slot == null || completed ? "NEW GAME  /  LEVEL 1  >" :
+            "CONTINUE LEVEL " + (levelTwo ? "2" : "1") + "  >";
+        Label(new Rect(660f, 488f, 572f, 20f), completed ? "CAMPAIGN COMPLETE" :
+            slot == null ? "A NEW GAME ALWAYS STARTS AT LEVEL 1" :
+            "CONTINUE RESUMES THE HIGHLIGHTED LEVEL", 12, completed ? Green : Muted, true);
+        if (Button(new Rect(660f, 522f, 572f, 62f), action, true)) ActivatePrimary();
+        if (completed)
+        {
+            if (Button(new Rect(660f, 604f, 572f, 50f), "REPLAY LEVEL 2"))
+                ContinueRequested?.Invoke();
+        }
+        else if (slot != null)
+        {
+            if (Button(new Rect(660f, 604f, 572f, 50f), "NEW GAME  /  START AT LEVEL 1"))
+                RequestNewGame();
+        }
+    }
+
+    private void DrawLevelCard(Rect bounds, bool crimson, UXCampaignSlot slot)
+    {
+        bool inLevelTwo = slot != null && slot.levelId == UXCampaign.CrimsonLevelId;
+        bool complete = slot != null && slot.completed;
+        bool locked = crimson && !inLevelTwo;
+        bool current = !complete && (crimson ? inLevelTwo : !inLevelTwo);
+        bool cleared = crimson ? complete : inLevelTwo;
+        Color accent = current ? Cyan : cleared ? Green : Muted;
+        Fill(bounds, current ? new Color(0.045f, 0.14f, 0.18f) : Panel);
+        Border(bounds, accent, current ? 3f : 1f);
+        if (current) Fill(new Rect(bounds.x, bounds.y, 5f, bounds.height), Cyan);
+        Label(new Rect(bounds.x + 24f, bounds.y + 17f, bounds.width - 48f, 24f),
+            crimson ? "LEVEL 2" : "LEVEL 1", 14, accent, true);
+        Label(new Rect(bounds.x + 24f, bounds.y + 52f, bounds.width - 48f, 40f),
+            crimson ? "CRIMSON DEPTHS" : "FACILITY BREACH", 27, locked ? Muted : Color.white, true);
+        string state = locked ? "LOCKED  /  CLEAR LEVEL 1" : current ?
+            (slot == null ? "NEW GAME STARTS HERE" : "CONTINUE HERE") :
+            complete && crimson ? "CAMPAIGN COMPLETE" : "CLEARED";
+        Label(new Rect(bounds.x + 24f, bounds.y + 104f, bounds.width - 48f, 28f),
+            state, 17, accent, true);
+        if (current && slot != null)
+            Label(new Rect(bounds.x + 24f, bounds.y + 158f, bounds.width - 48f, 24f),
+                crimson ? "SAVED CHECKPOINT " + slot.checkpoint + " / 3" : "RESUMES AT LEVEL START",
+                15, Muted);
     }
 
     private void DrawDifficultyCard(Rect bounds, UXDifficulty mode, Color accent)
     {
         bool selected = UXPlayerProgress.Data.difficulty == mode;
-        Fill(bounds, selected ? new Color(0.045f, 0.14f, 0.18f) : Panel);
-        Border(bounds, selected ? accent : new Color(0.12f, 0.30f, 0.37f), selected ? 2f : 1f);
+        bool hovered = ScreenRect(bounds).Contains(Event.current.mousePosition);
+        bool pressed = hovered && Input.GetMouseButton(0);
+        Fill(bounds, pressed ? new Color(0.10f, 0.27f, 0.32f) : selected ?
+            new Color(0.045f, 0.14f, 0.18f) : hovered ? new Color(0.04f, 0.12f, 0.16f) : Panel);
+        Border(bounds, selected || hovered ? accent : new Color(0.12f, 0.30f, 0.37f), selected || pressed ? 2f : 1f);
         if (selected) Fill(new Rect(bounds.x, bounds.y, 5f, bounds.height), accent);
-        Label(new Rect(bounds.x + 20f, bounds.y + 20f, bounds.width - 40f, 56f),
+        Label(new Rect(bounds.x + 20f, bounds.y, bounds.width - 40f, bounds.height),
             mode.ToString().ToUpperInvariant() + " MODE", 26, selected ? accent : Muted,
             true, TextAnchor.MiddleCenter);
         if (GUI.Button(ScreenRect(bounds), GUIContent.none, GUIStyle.none)) UXPlayerProgress.SelectDifficulty(mode);
@@ -139,28 +169,43 @@ public sealed class UXMissionMenuScreen
 
     private void ActivatePrimary()
     {
-        if(UXCampaign.SelectedSlot==null && !UXCampaign.IsCrimson)BriefingVisible=true;
-        else if(ContinueRequested!=null)ContinueRequested();
+        UXCampaignSlot slot = UXCampaign.SelectedSlot;
+        if (slot == null || slot.completed) RequestNewGame();
+        else ContinueRequested?.Invoke();
+    }
+
+    private void RequestNewGame()
+    {
+        resetError = null;
+        if (UXPlayerProgress.Data.campaigns.Count == 0 && UXPlayerProgress.Data.levels.Count == 0)
+            StartNewGame();
+        else resetVisible = true;
+    }
+
+    private void StartNewGame()
+    {
+        if (!UXCampaign.RestartGame())
+        {
+            resetVisible = true;
+            resetError = "Progress could not be reset. Your existing records have been kept.";
+            return;
+        }
+        resetVisible = false;
+        ErrorNotice = null;
+        if (RestartConfirmed != null) RestartConfirmed();
+        else BriefingVisible = true;
     }
 
     private void DrawReset()
     {
         Rect panel=new Rect(208f,212f,864f,425f);Fill(panel,Panel);Border(panel,Gold);
-        Label(new Rect(240f,242f,800f,42f),"RESTART GAME?",28,Color.white,true);
+        Label(new Rect(240f,242f,800f,42f),"START A NEW GAME?",28,Color.white,true);
         Label(new Rect(240f,316f,800f,112f),
             "All level progress, checkpoints and saved mission records in Easy and Hard will be erased.\nYou will start again at Level 1.",21,Color.white);
         Label(new Rect(240f,451f,800f,48f),resetError??"Your display and control settings will be kept.",15,
             resetError!=null?Gold:Muted);
         if(Button(new Rect(240f,548f,350f,52f),"CANCEL",true))resetVisible=false;
-        if(Button(new Rect(690f,548f,350f,52f),"RESTART GAME"))
-        {
-            if(UXCampaign.RestartGame())
-            {
-                resetVisible=false;
-                if(RestartConfirmed!=null)RestartConfirmed();else BriefingVisible=true;
-            }
-            else resetError="Progress could not be reset. Your existing records have been kept.";
-        }
+        if(Button(new Rect(690f,548f,350f,52f),"START NEW GAME")) StartNewGame();
     }
 
     public void DrawBriefingNavigation()
@@ -174,9 +219,10 @@ public sealed class UXMissionMenuScreen
     private bool Button(Rect bounds, string text, bool primary = false)
     {
         bool hovered = ScreenRect(bounds).Contains(Event.current.mousePosition);
-        Fill(bounds, primary ? (hovered ? new Color(0.55f, 1f, 1f) : Cyan) :
-            (hovered ? new Color(0.08f, 0.22f, 0.28f) : new Color(0.04f, 0.11f, 0.15f)));
-        Border(bounds, primary ? Cyan : new Color(0.20f, 0.48f, 0.56f));
+        bool pressed = hovered && Input.GetMouseButton(0);
+        Fill(bounds, primary ? (pressed ? new Color(0.11f, 0.61f, 0.69f) : hovered ? new Color(0.55f, 1f, 1f) : Cyan) :
+            (pressed ? new Color(0.12f, 0.31f, 0.36f) : hovered ? new Color(0.08f, 0.22f, 0.28f) : new Color(0.04f, 0.11f, 0.15f)));
+        Border(bounds, primary || hovered ? Cyan : new Color(0.20f, 0.48f, 0.56f), hovered ? 2f : 1f);
         GUIStyle style = Style(Mathf.Max(10, Mathf.RoundToInt((bounds.height < 30f ? 10f : 17f) * scale)),
             primary ? Ink : Color.white, true, TextAnchor.MiddleCenter);
         return GUI.Button(ScreenRect(bounds), text, style);

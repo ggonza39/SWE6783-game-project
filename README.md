@@ -1,11 +1,12 @@
 # SWE6783-game-project: Pixel Rebellion — Shadow Protocol
 
-## Two-level campaign candidate — November 15, 2026
+## Two-level campaign candidate — November 17, 2026
 
 Open `src` with **Unity 6000.2.2f1**, then open
 `Assets/Scenes/UXFacilityExpanded.unity` and press Play. Choose **Easy Mode** or
-**Hard Mode**, then **Start Game** or **Continue**. Existing Level 1 clears unlock
-Level 2 automatically when their saved records migrate.
+**Hard Mode**. **New Game** starts at Level 1; **Continue Level 1/2** explicitly
+resumes the highlighted card and checkpoint. New Game asks before clearing an existing
+campaign. Existing Level 1 clears unlock Level 2 when their saved records migrate.
 
 - **Level 1 / Facility Breach:** keycard, three caches, security hack and extraction.
   The approved stronger Hard challenge and required exit door are retained.
@@ -19,7 +20,7 @@ Level 2 automatically when their saved records migrate.
   and Replay after death restore
   the latest secured sector/checkpoint with earlier level clears intact. Both
   modes retain separate progress and best mission times.
-- **Sprint:** a non-refilling 10-second reserve per level, equal in Easy and Hard.
+- **Sprint:** a non-refilling 10-second reserve in Level 1 and 20-second reserve in Level 2, equal in Easy and Hard.
   Death replays restore full health and stamina at the secured checkpoint; empty reserves leave crouched movement during an attempt.
 - **Controls:** WASD/arrows move crouched; C/CTRL extra slow; SHIFT sprint; hold E
   to download/hack; hold TAB for the map; ESC pause; R opens Restart Level.

@@ -102,9 +102,10 @@ public static class FinalCampaignChecks
     {
         foreach(var mode in new[]{UXDifficulty.Easy,UXDifficulty.Hard})foreach(var level in new[]{UXPlayerProgress.FacilityLevelId,UXCampaign.CrimsonLevelId})
         {
-            World(mode);UXCampaign.RestartLevel(level,mode);UXCampaign.Begin(level,mode);UXCampaign.SpendSprint(10f);UXCampaign.RecordDeath();
+            float capacity=UXCampaign.CapacityForLevel(level);
+            World(mode);UXCampaign.RestartLevel(level,mode);UXCampaign.Begin(level,mode);UXCampaign.SpendSprint(capacity);UXCampaign.RecordDeath();
             Check(UXCampaign.PrepareReplay()==UXCampaign.ScenePath(level),"Replay selected another level.");UXCampaign.Begin(level,mode);
-            Check(UXCampaign.SprintRemaining==10f,"One level or difficulty still retains exhausted sprint after Replay.");
+            Check(UXCampaign.SprintRemaining==capacity,"One level or difficulty restores the wrong sprint budget after Replay.");
         }
         World(UXDifficulty.Easy);UXCampaign.Complete(UXCampaign.CrimsonLevelId,UXDifficulty.Easy,120f);
         Check(UXCampaign.SelectedSlot.completed&&!UXCampaign.NeedsAdvance&&!UXCampaign.Running,"Level 2 still tries to advance to another mission.");
