@@ -15,9 +15,10 @@ public static class EvidenceSetup
 
     private static void SetupEvidenceSystem()
     {
-        // The authored demo already contains its complete gameplay setup.
-        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().path ==
-            "Assets/Scenes/UXFacilityExpanded.unity")
+        // Authored campaign scenes already contain their complete gameplay setup.
+        string scenePath = UnityEngine.SceneManagement.SceneManager.GetActiveScene().path;
+        if (scenePath == "Assets/Scenes/UXFacilityPreview.unity" ||
+            scenePath == UXCampaign.FacilityScene || scenePath == UXCampaign.CrimsonScene)
             return;
 
         if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)

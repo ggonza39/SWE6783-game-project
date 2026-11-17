@@ -37,7 +37,7 @@ public sealed class UXCharacterVisuals : MonoBehaviour
     private static void Attach()
     {
         if (SceneManager.GetActiveScene().name != "UXFacilityPreview" &&
-            SceneManager.GetActiveScene().name != "UXFacilityExpanded")
+            !UXCampaign.IsCampaignScene)
             return;
 
         PlayerController player = FindFirstObjectByType<PlayerController>();

@@ -51,7 +51,29 @@ public sealed class UXStealthState
 
     public bool TryDamage(int amount)
     {
-        if (!Alive || !Responding || amount <= 0 || hitProtection > 0f) return false;
+        return ApplyDamage(amount, Responding);
+    }
+
+    public bool TryHazardDamage(int amount) => ApplyDamage(amount, true);
+
+    // An energized laser is lethal even during a recent shot/mine's brief
+    // protection. This exception never changes ordinary guard or mine stacking.
+    public bool TryLethalHazard()
+    {
+        if (!Alive) return false;
+        Health = 0;
+        return true;
+    }
+
+    public void InvestigateNoise()
+    {
+        if (!Alive || Phase == UXAlertPhase.Engaged) return;
+        unseenTime = 0f; Alert = Math.Max(60f, Alert); Phase = UXAlertPhase.Searching;
+    }
+
+    private bool ApplyDamage(int amount, bool allowed)
+    {
+        if (!Alive || !allowed || amount <= 0 || hitProtection > 0f) return false;
         Health = Math.Max(0, Health - amount);
         hitProtection = 0.85f; // Shared across guards: three shots cannot erase all health in one frame.
         return true;

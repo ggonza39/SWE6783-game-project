@@ -26,6 +26,8 @@ public sealed class UXMissionBriefingScreen
     private GUIStyle deployStyle;
     private int deployFontSize;
     private readonly bool expanded;
+    private readonly bool crimson;
+    private readonly List<Vector2> consolePositions=new List<Vector2>();
     private readonly Vector2 keyPosition;
     private readonly Vector2 gatePosition;
     private bool tacticalMap;
@@ -33,10 +35,13 @@ public sealed class UXMissionBriefingScreen
     public UXMissionBriefingScreen(int totalEvidence, bool expandedFacility = false)
     {
         expanded = expandedFacility;
+        crimson=UXCampaign.IsCrimson;
         evidenceCount = Mathf.Max(1, totalEvidence);
         sneakSheet = Resources.Load<Texture2D>("UXArtDeluxe/player_sneak_sheet");
         GameObject player = GameObject.Find("Player");
         GameObject terminal = GameObject.Find("Terminal");
+        if(crimson)foreach(TerminalInteraction console in Object.FindObjectsByType<TerminalInteraction>(FindObjectsSortMode.None))
+            consolePositions.Add(console.transform.position);
         GameObject exit = GameObject.Find("ExtractionZone");
         playerPosition = player != null ? (Vector2)player.transform.position : Vector2.zero;
         terminalPosition = terminal != null ? (Vector2)terminal.transform.position : Vector2.zero;
@@ -55,6 +60,7 @@ public sealed class UXMissionBriefingScreen
                 continue;
 
             if (expanded && collider.gameObject.name == "AccessGate") continue;
+            if(crimson && (collider.gameObject.name.StartsWith("SectorBulkhead_") || collider.gameObject.name=="Door_EXIT"))continue;
             Bounds box = collider.bounds;
             solidBounds.Add(new Rect(box.min.x, box.min.y, box.size.x, box.size.y));
             if (!hasBounds) { bounds = box; hasBounds = true; }
@@ -92,7 +98,7 @@ public sealed class UXMissionBriefingScreen
         Fill(new Rect(48f, 79f, 1184f, 1f), new Color(0.12f, 0.35f, 0.43f));
 
         Label(new Rect(48f, 110f, 640f, 28f),
-            expanded ? "OPERATION 01  //  FACILITY BREACH" : "OPERATION 01  //  NEON FACILITY", 15, Cyan, true);
+            crimson?"OPERATION 02  //  CRIMSON DEPTHS":expanded ? "OPERATION 01  //  FACILITY BREACH" : "OPERATION 01  //  NEON FACILITY", 15, Cyan, true);
         Label(new Rect(44f, 147f, 670f, 94f), "PIXEL", 78, Color.white, true);
         Label(new Rect(44f, 228f, 680f, 82f), "REBELLION", 64, Color.white, true);
         Fill(new Rect(50f, 321f, 54f, 4f), Cyan);
@@ -100,22 +106,22 @@ public sealed class UXMissionBriefingScreen
         Label(new Rect(142f, 306f, 450f, 35f),
             "SHADOW PROTOCOL", 21, Cyan, true);
         Label(new Rect(48f, 365f, 520f, 60f),
-            expanded ? "Steal the key. Infiltrate the research wing.\nSecure the data. Escape the lockdown." :
+            crimson?"Infiltrate the docks. Breach the archives.\nCrack the vault. Reach extraction.":expanded ? "Steal the key. Infiltrate the research wing.\nSecure the data. Escape the lockdown." :
             "Infiltrate. Secure the evidence.\nHack security. Reach extraction.", 21, Color.white);
         Label(new Rect(48f, 433f, 500f, 24f),
             "STAY UNSEEN. GET OUT CLEAN.", 13, Muted, true);
         DrawAgent();
         DrawFacility(new Rect(734f, 110f, 498f, 347f));
 
-        DrawObjective(new Rect(48f, 486f, 384f, 122f), "01", expanded ? "BREACH THE GATE" : "SECURE THE DATA",
-            expanded ? "Find the gold access keycard.\nIt opens the marked security gate." :
+        DrawObjective(new Rect(48f, 486f, 384f, 122f), "01", crimson?"INFILTRATE THE DOCKS":expanded ? "BREACH THE GATE" : "SECURE THE DATA",
+            crimson?"Secure the Dock records.\nFind its security console.":expanded ? "Find the gold access keycard.\nIt opens the marked security gate." :
             "Collect " + evidenceCount + " evidence " + (evidenceCount == 1 ? "cache." : "caches.") +
             "\nWalk over each to pick it up.", Gold);
-        DrawObjective(new Rect(448f, 486f, 384f, 122f), "02", "CUT THE CAMERAS",
-            expanded ? "Hold E to download the evidence.\nThen hack the security terminal." :
+        DrawObjective(new Rect(448f, 486f, 384f, 122f), "02", crimson?"BREACH THE ARCHIVES":"CUT THE CAMERAS",
+            crimson?"Explore the restricted server wing.\nFollow the sector objectives.":expanded ? "Hold E to download the evidence.\nThen hack the security terminal." :
             "With all data, approach the terminal.\nPress E to hack security.", Cyan);
         DrawObjective(new Rect(848f, 486f, 384f, 122f), "03", "REACH EXTRACTION",
-            expanded ? "Complete the mission objectives.\nReach the marked extraction point." :
+            crimson?"Secure the reactor records.\nReach the extraction lift.":expanded ? "Complete the mission objectives.\nReach the marked extraction point." :
             "Head for the green exit.\nAll objectives must be complete.", Green);
 
         DrawControls();
@@ -182,7 +188,7 @@ public sealed class UXMissionBriefingScreen
         Rect map = new Rect(available.center.x - worldBounds.width * unit / 2f,
             available.center.y - worldBounds.height * unit / 2f,
             worldBounds.width * unit, worldBounds.height * unit);
-        Fill(map, new Color(0.035f, 0.095f, 0.13f));
+        Fill(map, crimson?new Color(.13f,.055f,.08f):new Color(0.035f, 0.095f, 0.13f));
         for (float x = Mathf.Ceil(worldBounds.xMin); x < worldBounds.xMax; x++)
         {
             float sx = MapPoint(new Vector2(x, worldBounds.yMin), map).x;
@@ -198,7 +204,7 @@ public sealed class UXMissionBriefingScreen
         {
             Vector2 topLeft = MapPoint(new Vector2(solid.xMin, solid.yMax), map);
             Rect wall = new Rect(topLeft.x, topLeft.y, solid.width * unit, solid.height * unit);
-            Fill(wall, new Color(0.24f, 0.38f, 0.46f));
+            Fill(wall, crimson?new Color(.40f,.20f,.27f):new Color(0.24f, 0.38f, 0.46f));
             Fill(new Rect(wall.x, wall.y, wall.width, Mathf.Min(2f, wall.height)),
                 new Color(0.38f, 0.58f, 0.65f));
         }
@@ -206,14 +212,15 @@ public sealed class UXMissionBriefingScreen
         if (tacticalMap)
         {
             foreach (EvidenceCollectible data in Object.FindObjectsByType<EvidenceCollectible>(FindObjectsSortMode.None))
-                DrawMapMarker(MapPoint(data.transform.position, map), Gold, 8f);
+                if(data.gameObject.activeSelf)DrawMapMarker(MapPoint(data.transform.position, map), Gold, 8f);
         }
         else foreach (Vector2 data in dataPositions) DrawMapMarker(MapPoint(data, map), Gold, 8f);
-        DrawMapMarker(MapPoint(terminalPosition, map), Cyan, 8f);
+        if(crimson)foreach(Vector2 console in consolePositions)DrawMapMarker(MapPoint(console,map),Cyan,8f);
+        else DrawMapMarker(MapPoint(terminalPosition, map), Cyan, 8f);
         DrawMapMarker(MapPoint(exitPosition, map), Green, 11f);
         GameObject currentPlayer = tacticalMap ? GameObject.Find("Player") : null;
         DrawMapMarker(MapPoint(currentPlayer != null ? (Vector2)currentPlayer.transform.position : playerPosition, map), Color.white, 7f);
-        if (expanded)
+        if (expanded && !crimson)
         {
             bool hasKey = tacticalMap && GameObject.Find("AccessKeycard") == null;
             Vector2 keyPoint = MapPoint(keyPosition, map), gatePoint = MapPoint(gatePosition, map);
@@ -236,6 +243,22 @@ public sealed class UXMissionBriefingScreen
         }
 
         float scan = Mathf.Repeat(Time.unscaledTime * 0.16f, 1f);
+        if(crimson && UXStealthDirector.Instance!=null && UXStealthDirector.Instance.Sectors!=null)
+        {
+            UXSectorMission sectors=UXStealthDirector.Instance.Sectors;
+            for(int i=0;i<sectors.Checkpoints.Length;i++)
+            {
+                if(sectors.CheckpointAt(sectors.Checkpoints[i])!=i)continue;
+                Vector2 cp=MapPoint(sectors.Checkpoints[i],map);
+                DrawMapMarker(cp,i<=sectors.SecuredSectors?Green:Muted,9f);
+                Label(new Rect(cp.x+6f,cp.y-14f,42f,18f),"CP"+i,10,Green,true);
+            }
+            foreach(BoxCollider2D bulkhead in sectors.Bulkheads)
+            {
+                Vector2 at=MapPoint(bulkhead.transform.position,map);
+                DrawMapMarker(at,bulkhead.enabled?Gold:Green,10f);
+            }
+        }
         if (tacticalMap && expanded && UXStealthDirector.Instance != null)
             foreach (UXAccessLock access in UXStealthDirector.Instance.AccessLocks)
             {

@@ -19,6 +19,7 @@ public class TerminalInteraction : MonoBehaviour
     [Tooltip("Cameras this terminal disables once hacked. Leave empty to " +
         "auto-disable every SecurityCamera currently in the scene.")]
     [SerializeField] private SecurityCamera[] camerasToDisable;
+    [SerializeField] private bool completesMission = true;
 
     private bool playerNearby;
     private bool activated;
@@ -77,7 +78,7 @@ public class TerminalInteraction : MonoBehaviour
         }
 
         activated = true;
-        GameManager.Instance?.ActivateTerminal();
+        if (completesMission) GameManager.Instance?.ActivateTerminal();
         DisableLinkedCameras();
         Notify("TERMINAL ACCESS GRANTED - Security camera disabled.", TerminalMessageTone.Success);
     }
@@ -99,6 +100,11 @@ public class TerminalInteraction : MonoBehaviour
             if (camera != null)
                 camera.SetDisabled(true);
         }
+    }
+
+    public void RestoreActivated()
+    {
+        activated = true; DisableLinkedCameras();
     }
 
     // Updates the public, HUD-readable message state. Only called for

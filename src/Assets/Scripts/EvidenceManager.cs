@@ -33,4 +33,6 @@ public class EvidenceManager : MonoBehaviour
     {
         return EvidenceCollected >= requiredAmount;
     }
+
+    public void RestoreEvidence(int amount) { EvidenceCollected = Mathf.Max(0, amount); }
 }

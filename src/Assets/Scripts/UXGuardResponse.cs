@@ -37,7 +37,8 @@ public sealed class UXGuardResponse : MonoBehaviour
         if (beam != null) beam.enabled = false;
         if (director == null || Time.timeScale <= 0f || GameManager.Instance == null ||
             GameManager.Instance.GameEnded) return;
-        if (director.State.Responding)
+        UXStealthState alert=director.AlertFor(transform);
+        if (alert.Responding)
         {
             if (!responding)
             {
@@ -64,8 +65,8 @@ public sealed class UXGuardResponse : MonoBehaviour
             else
             {
                 aimTime = 0f;
-                Vector2 target = director.LastKnownPosition;
-                if (director.State.Phase == UXAlertPhase.Searching &&
+                Vector2 target = director.LastKnownFor(transform);
+                if (alert.Phase == UXAlertPhase.Searching &&
                     Vector2.Distance(transform.position, target) < 1.2f)
                 {
                     if (Time.time >= searchAt)
@@ -75,7 +76,7 @@ public sealed class UXGuardResponse : MonoBehaviour
                     }
                     target = searchTarget;
                 }
-                Navigate(target, director.State.Phase == UXAlertPhase.Engaged ? 1.9f : 1.25f);
+                Navigate(target, alert.Phase == UXAlertPhase.Engaged ? 1.9f : 1.25f);
             }
         }
         else if (responding)
@@ -99,16 +100,18 @@ public sealed class UXGuardResponse : MonoBehaviour
 
     private void Navigate(Vector2 target, float speed)
     {
+        int sector=director.IsCrimson?UXSectorMission.Membership(transform):-1;
+        if(sector>=0)target=UXSectorMission.ClampTarget(sector,target);
         speed *= director.Difficulty.ResponseSpeed;
         if (Time.time >= repathAt)
         {
-            path = director.Path(transform.position, target); pathStep = 0;
+            path = director.Path(transform.position, target,sector); pathStep = 0;
             repathAt = Time.time + 0.65f;
         }
         while (pathStep < path.Count && Vector2.Distance(transform.position, path[pathStep]) < 0.045f) pathStep++;
         if (pathStep >= path.Count)
         {
-            if (!director.State.Responding && path.Count > 0 &&
+            if (!director.GuardResponds(transform) && path.Count > 0 &&
                 Vector2.Distance(transform.position, target) < 0.45f &&
                 director.CanGuardTravel(transform.position, target))
             {

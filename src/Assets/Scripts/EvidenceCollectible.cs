@@ -28,4 +28,6 @@ public class EvidenceCollectible : MonoBehaviour
             Destroy(gameObject);
         }
     }
+
+    public void RestoreCollected() { collected = true; gameObject.SetActive(false); }
 }

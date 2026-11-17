@@ -5,6 +5,13 @@ public class UXHUDController : MonoBehaviour
 {
     private static UXHUDController instance;
     private static bool startGameplayAfterReload = false;
+    private static bool showBriefingAfterReload;
+    private float advanceAt=-1f;
+    private int lastSecuredSectors;
+    private string campaignLoadError;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetSceneRequests(){startGameplayAfterReload=false;showBriefingAfterReload=false;}
 
     private Transform player;
     private PlayerHiding playerHiding;
@@ -144,6 +151,8 @@ public class UXHUDController : MonoBehaviour
         interactionCompletedUntil = -1f;
         interactionCompletedLabel = "";
         lastReleasedLocks = 0;
+        lastSecuredSectors=0;advanceAt=-1f;
+        campaignLoadError=null;
         toastMessage = "";
         toastUntil = 0f;
         toastBorder = cyanTex;
@@ -179,8 +188,9 @@ public class UXHUDController : MonoBehaviour
 
         hidingSpots = GameObject.FindGameObjectsWithTag("HidingSpot");
 
-        if (evidenceItems != null &&
-            evidenceItems.Length > 0)
+        UXMissionDefinition definition = FindFirstObjectByType<UXMissionDefinition>();
+        if (definition != null) totalEvidence = definition.requiredEvidence;
+        else if (evidenceItems != null && evidenceItems.Length > 0)
         {
             totalEvidence = evidenceItems.Length;
         }
@@ -197,6 +207,17 @@ public class UXHUDController : MonoBehaviour
         missionBriefing = SceneManager.GetActiveScene().name == "UXFacilityPreview" || ExpandedFacility
             ? new UXMissionBriefingScreen(totalEvidence, ExpandedFacility) : null;
         missionMenu = ExpandedFacility ? new UXMissionMenuScreen() : null;
+        if(missionMenu!=null)
+        {
+            missionMenu.ContinueRequested=()=>
+            {
+                bool fresh=UXCampaign.SelectedSlot==null;
+                LoadCampaignScene(UXCampaign.PrepareContinue(),!fresh,fresh);
+            };
+            missionMenu.RestartConfirmed=()=>LoadCampaignScene(UXCampaign.FacilityScene,false,true);
+            if(showBriefingAfterReload)missionMenu.BriefingVisibleForNewGame();
+        }
+        showBriefingAfterReload=false;
         if (ExpandedFacility) UXPlayerProgress.ApplyDisplaySettings();
 
         //Creates a fresh record when player reloads the mission
@@ -209,6 +230,11 @@ public class UXHUDController : MonoBehaviour
         {
             ConfigureMissionDifficulty();
             GameplayMetrics.Instance?.StartSession();
+            UXCampaign.BindTelemetrySession();
+            lastEvidenceCount=EvidenceManager.Instance!=null?EvidenceManager.Instance.EvidenceCollected:0;
+            lastSecuredSectors=UXStealthDirector.Instance!=null && UXStealthDirector.Instance.Sectors!=null?
+                UXStealthDirector.Instance.Sectors.SecuredSectors:0;
+            ShowToast(UXCampaign.IsCrimson?"LEVEL 2 / CRIMSON DEPTHS":"CAMPAIGN RESUMED",cyanTex,4f);
         }
 
 
@@ -248,11 +274,30 @@ public class UXHUDController : MonoBehaviour
         {
             Time.timeScale = 0f;
 
+            if (!GameManager.Instance.PlayerWon && UXStealthDirector.Instance != null &&
+                UXStealthDirector.Instance.Effects != null && (UXStealthDirector.Instance.Effects.DeathRevealing ||
+                    UXStealthDirector.Instance.Effects.Replay.WaitingForFreeze)) return;
+
+            UXDeathReplay deathReplay=UXStealthDirector.Instance!=null && UXStealthDirector.Instance.Effects!=null?
+                UXStealthDirector.Instance.Effects.Replay:null;
+            if(!GameManager.Instance.PlayerWon && deathReplay!=null && deathReplay.AutoPlaying)
+            {
+                if(Input.GetKeyDown(KeyCode.Return)||Input.GetKeyDown(KeyCode.Space)||Input.GetKeyDown(KeyCode.Escape))deathReplay.SkipAuto();
+                return;
+            }
+
+            if(ExpandedFacility && GameManager.Instance.PlayerWon && UXCampaign.NeedsAdvance)
+            {
+                if(advanceAt<0f)advanceAt=Time.unscaledTime+1.25f;
+                if(Time.unscaledTime>=advanceAt)LoadCampaignScene(UXCampaign.CrimsonScene,true);
+                return;
+            }
+
             if (Input.GetKeyDown(KeyCode.Return) ||
                 Input.GetKeyDown(KeyCode.KeypadEnter) ||
                 Input.GetKeyDown(KeyCode.Space))
             {
-                RetryMission();
+                ContinueMission();
             }
             else if (Input.GetKeyDown(KeyCode.Escape))
             {
@@ -319,6 +364,14 @@ public class UXHUDController : MonoBehaviour
         UpdateTerminalFeedback();
         if (ExpandedFacility && UXStealthDirector.Instance != null)
         {
+            UXSectorMission sectors=UXStealthDirector.Instance.Sectors;
+            if(sectors!=null && sectors.SecuredSectors>lastSecuredSectors)
+            {
+                ConfirmInteraction(UXPlayerProgress.Store.HasSaveError?"SECTOR SECURED":"SECTOR SECURED - CHECKPOINT SAVED");
+                ShowToast(UXPlayerProgress.Store.HasSaveError?"SECTOR SECURED - SAVE UNAVAILABLE":
+                    "CHECKPOINT SAVED  /  SECTOR "+sectors.SecuredSectors,greenTex,3f);
+                lastSecuredSectors=sectors.SecuredSectors;
+            }
             int released = UXStealthDirector.Instance.ReleasedLocks;
             if (released > lastReleasedLocks) ConfirmInteraction("EXTRACTION DOOR OPEN");
             lastReleasedLocks = released;
@@ -408,6 +461,35 @@ public class UXHUDController : MonoBehaviour
         if (GameManager.Instance != null &&
             GameManager.Instance.GameEnded)
         {
+            UXStealthDirector ended = ExpandedFacility ? UXStealthDirector.Instance : null;
+            if (!GameManager.Instance.PlayerWon && ended != null && ended.Effects != null &&
+                (ended.Effects.DeathRevealing || ended.Effects.Replay.WaitingForFreeze))
+            {
+                DrawHUD();
+                DrawHazardFeedback();
+                if(ended.Effects.ImpactPulse>0f)
+                {
+                    Color previous=GUI.color;
+                    GUI.color=ended.LastDamageCause=="LASER BARRIER"?new Color(.55f,.9f,1f,ended.Effects.ImpactPulse*.3f):new Color(1f,.3f,.15f,ended.Effects.ImpactPulse*.3f);
+                    GUI.DrawTexture(new Rect(0,GetTopBarHeight(),Screen.width,Screen.height-GetTopBarHeight()-GetBottomBarHeight()),Texture2D.whiteTexture);
+                    GUI.color=previous;
+                }
+                float scale = GetHudScale();
+                Rect caption = new Rect(14f * scale, Screen.height - GetBottomBarHeight() + 10f * scale,
+                    Screen.width - 28f * scale, 46f * scale);
+                DrawPanel(caption, darkTex, redTex);
+                GUI.Label(caption, ended.DeathHeadline, CenterStyle(Mathf.RoundToInt(21f * scale), new Color(1f,.55f,.35f)));
+                return;
+            }
+            if(!GameManager.Instance.PlayerWon && ended!=null && ended.Effects!=null && ended.Effects.Replay.AutoPlaying)
+            { DrawAutomaticDeathReplay(ended.Effects.Replay,ended.DeathHeadline);return; }
+            if(ExpandedFacility && GameManager.Instance.PlayerWon && UXCampaign.NeedsAdvance)
+            {
+                DrawPanel(new Rect(0,0,Screen.width,Screen.height),darkTex,greenTex);
+                GUI.Label(new Rect(20,Screen.height*.35f,Screen.width-40,60),"LEVEL 1 CLEARED",TitleStyle(30));
+                GUI.Label(new Rect(20,Screen.height*.50f,Screen.width-40,48),"DESCENDING INTO CRIMSON DEPTHS",CenterStyle(20,Color.white));
+                return;
+            }
             DrawMissionResult();
             return;
         }
@@ -417,7 +499,11 @@ public class UXHUDController : MonoBehaviour
         // Labels are visual guidance only: no gameplay state is changed.
         if (!helpVisible && !restartConfirmationVisible &&
             !mainMenuConfirmationVisible)
+        {
             DrawObjectiveMarkers();
+            DrawHazardFeedback();
+            DrawExtractionSignal();
+        }
         if (ExpandedFacility && Input.GetKey(KeyCode.Tab) && !helpVisible &&
             !restartConfirmationVisible && !mainMenuConfirmationVisible && missionBriefing != null)
             missionBriefing.DrawMapOverlay();
@@ -621,7 +707,7 @@ public class UXHUDController : MonoBehaviour
             : (!TerminalAccessed ? "ACCESS SECURITY TERMINAL [E]" : "REACH EXTRACTION");
         UXStealthDirector stealth = ExpandedFacility ? UXStealthDirector.Instance : null;
         if (stealth != null) objective = stealth.Objective;
-        float s = GetHudScale(), h = GetTopBarHeight() - (ExpandedFacility ? 32f * s : 0f), p = 12f * s;
+        float s = GetHudScale(), h = GetTopBarHeight() - (ExpandedFacility ? 56f * s : 0f), p = 12f * s;
         float usable = Screen.width - 2f * p;
         Rect title, count, state, goal;
 
@@ -650,7 +736,7 @@ public class UXHUDController : MonoBehaviour
         }
 
         DrawPanel(new Rect(0f, 0f, Screen.width, GetTopBarHeight()), darkTex, cyanTex);
-        GUI.Label(title, "PIXEL REBELLION",
+        GUI.Label(title, UXCampaign.IsCrimson?"CRIMSON DEPTHS":"PIXEL REBELLION",
             TitleStyle(Mathf.RoundToInt(18f * s)));
         GUI.Label(count, "EVIDENCE  " + evidence + " / " + totalEvidence,
             CenterStyle(Mathf.RoundToInt(16f * s), Color.white));
@@ -663,8 +749,65 @@ public class UXHUDController : MonoBehaviour
         GUI.Label(goal, "OBJECTIVE:  " + objective,
             CenterStyle(Mathf.RoundToInt(16f * s),
                 new Color(0.45f, 1f, 0.55f)));
-        if (stealth != null) DrawSecurityStatus(stealth, h, s);
+        if (stealth != null){DrawSecurityStatus(stealth, h, s);DrawSprintReserve(h+32f*s,s);}
         DrawContextPrompt(evidence);
+    }
+
+    private void DrawSprintReserve(float y,float s)
+    {
+        float left=UXCampaign.SprintRemaining,ratio=left/UXSprintReserve.CapacitySeconds;
+        ratio=Mathf.Clamp01(ratio);
+        Color tint=StaminaTint(ratio);
+        float p=14f*s,label=158f*s,copy=250f*s;
+        GUI.Label(new Rect(p,y,label,20f*s),"SPRINT  "+left.ToString("0.0")+"s",CenterStyle(Mathf.RoundToInt(12f*s),tint));
+        Rect track=new Rect(p+label+8f*s,y+6f*s,Screen.width-2f*p-label-copy-20f*s,9f*s);
+        Color old=GUI.color;GUI.color=new Color(.12f,.23f,.28f);GUI.DrawTexture(track,Texture2D.whiteTexture);
+        GUI.color=tint;GUI.DrawTexture(new Rect(track.x,track.y,track.width*ratio,track.height),Texture2D.whiteTexture);GUI.color=old;
+        DrawRectBorder(track,Texture2D.whiteTexture,1);
+        GUI.Label(new Rect(Screen.width-p-copy,y,copy,20f*s),left<=0f?"RESERVE EMPTY / CROUCH ONLY":ratio<=.25f?
+            "RESERVE CRITICAL / NO RECHARGE":ratio<=.5f?"RESERVE LOW / NO RECHARGE":"RESERVE READY / NO RECHARGE",
+            CenterStyle(Mathf.RoundToInt(11f*s),tint));
+    }
+
+    private static Color StaminaTint(float fraction)
+    {
+        float f=Mathf.Clamp01(fraction);
+        Color red=new Color(1f,.25f,.18f),yellow=new Color(1f,.80f,.18f),green=new Color(.28f,1f,.48f);
+        Color from=f<.5f?red:yellow,to=f<.5f?yellow:green;
+        float t=f<.5f?Mathf.Clamp01((f-.2f)/.3f):(f-.5f)*2f;
+        return new Color(from.r+(to.r-from.r)*t,from.g+(to.g-from.g)*t,from.b+(to.b-from.b)*t);
+    }
+
+    private void DrawExtractionSignal()
+    {
+        UXStealthDirector d=UXStealthDirector.Instance;
+        if(d==null || !d.IsCrimson || d.Difficulty.Mode!=UXDifficulty.Hard || d.Sectors.SecuredSectors<3 ||
+            d.InteractionAvailable || (d.Hazards!=null && d.Hazards.Warning!=null))return;
+        float s=GetHudScale(),width=Mathf.Min(Screen.width-28f*s,650f*s);
+        Rect panel=new Rect((Screen.width-width)*.5f,Screen.height-GetBottomBarHeight()-43f*s,width,30f*s);
+        DrawPanel(panel,darkTex,d.ExtractionLocksReleased?greenTex:yellowTex);
+        GUI.Label(panel,d.ExtractionLocksReleased?"EXTRACTION ROUTE OPEN / REACH THE LIFT":"LIFT POWER RESTORED / OVERRIDE THE EXIT DOOR",
+            CenterStyle(Mathf.RoundToInt(13f*s),d.ExtractionLocksReleased?new Color(.35f,1f,.65f):Color.yellow));
+    }
+
+    private void DrawHazardFeedback()
+    {
+        UXCrimsonHazards hazards=UXStealthDirector.Instance!=null?UXStealthDirector.Instance.Hazards:null;
+        if(hazards==null)return;
+        float s=GetHudScale();
+        if(hazards.Warning!=null)
+        {
+            float width=Mathf.Min(Screen.width-24f,610f*s);
+            Rect panel=new Rect((Screen.width-width)*.5f,GetTopBarHeight()+10f*s,width,36f*s);
+            DrawPanel(panel,darkTex,yellowTex);
+            GUI.Label(panel,hazards.Warning,CenterStyle(Mathf.RoundToInt(15f*s),Color.yellow));
+        }
+        if(hazards.ImpactFlash>0f)
+        {
+            Color previous=GUI.color;GUI.color=new Color(1f,.4f,.2f,hazards.ImpactFlash*.8f);
+            DrawRectBorder(new Rect(0,GetTopBarHeight(),Screen.width,Screen.height-GetTopBarHeight()-GetBottomBarHeight()),redTex,Mathf.Max(2,Mathf.RoundToInt(5*s)));
+            GUI.color=previous;
+        }
     }
 
     private void DrawSecurityStatus(UXStealthDirector stealth, float y, float s)
@@ -678,7 +821,7 @@ public class UXHUDController : MonoBehaviour
         GUI.Label(new Rect(third, y, third, 27f * s), stealth.PhaseLabel,
             CenterStyle(Mathf.RoundToInt(14f * s), alert));
         GUI.Label(new Rect(third * 2f, y, third, 27f * s),
-            stealth.KeyAcquired ? (stealth.Difficulty.Mode == UXDifficulty.Hard ?
+            stealth.IsCrimson?"SECTORS: "+stealth.Sectors.SecuredSectors+" / 3   |   TAB MAP":stealth.KeyAcquired ? (stealth.Difficulty.Mode == UXDifficulty.Hard ?
                 "EXIT DOOR: " + (stealth.ExtractionLocksReleased ? "OPEN" : "LOCKED") + "   |   TAB MAP" :
                 "ACCESS GATE: OPEN   |   TAB MAP") :
                 "ACCESS KEY: REQUIRED   |   TAB MAP",
@@ -894,7 +1037,18 @@ public class UXHUDController : MonoBehaviour
             ? EvidenceManager.Instance.EvidenceCollected : 0;
 
         // Only show the current required objective to avoid label clutter.
-        if (ExpandedFacility && UXStealthDirector.Instance != null && !UXStealthDirector.Instance.KeyAcquired)
+        UXStealthDirector director=ExpandedFacility?UXStealthDirector.Instance:null;
+        if(director!=null && director.IsCrimson)
+        {
+            UXSectorMission sectors=director.Sectors;
+            for(int i=0;i<9;i++)if(sectors.CacheAvailable(i))
+                DrawObjectMarker(camera,sectors.Cache(i).transform.position,"EVIDENCE",cyanTex);
+            if(sectors.SecuredSectors<3)
+                DrawObjectMarker(camera,sectors.Consoles[sectors.SecuredSectors].transform.position,"HACK",yellowTex);
+            else if(!sectors.ExitDoor.IsUnlocked)DrawObjectMarker(camera,sectors.ExitDoor.transform.position,"EXIT DOOR",yellowTex);
+            else if(extractionZone!=null)DrawObjectMarker(camera,extractionZone.transform.position,"EXTRACTION",greenTex);
+        }
+        else if (ExpandedFacility && UXStealthDirector.Instance != null && !UXStealthDirector.Instance.KeyAcquired)
         {
             DrawObjectMarker(camera, UXStealthDirector.Instance.KeyPosition, "KEY", yellowTex);
             DrawObjectMarker(camera, UXStealthDirector.Instance.GatePosition, "LOCKED", redTex);
@@ -905,7 +1059,7 @@ public class UXHUDController : MonoBehaviour
             {
                 foreach (EvidenceCollectible evidence in evidenceItems)
                 {
-                    if (evidence != null)
+                    if (evidence != null && evidence.gameObject.activeSelf)
                         DrawObjectMarker(camera, evidence.transform.position,
                             "EVIDENCE", cyanTex);
                 }
@@ -929,7 +1083,7 @@ public class UXHUDController : MonoBehaviour
         }
 
         if (ExpandedFacility && UXStealthDirector.Instance != null &&
-            UXStealthDirector.Instance.KeyAcquired && player != null &&
+            !UXStealthDirector.Instance.IsCrimson && UXStealthDirector.Instance.KeyAcquired && player != null &&
             Vector2.Distance(player.position, UXStealthDirector.Instance.GatePosition) < 6f)
             DrawObjectMarker(camera, UXStealthDirector.Instance.GatePosition, "OPEN", greenTex);
 
@@ -961,11 +1115,12 @@ public class UXHUDController : MonoBehaviour
             return;
 
         string compactLabel = label == "EVIDENCE" ? "DATA" :
+            label=="EXIT DOOR"||label=="EXIT DOOR [HOLD E]"?"EXIT DOOR":label=="HACK"?"HACK":
             label == "TERMINAL [E]" ? (terminalInteraction != null && terminalInteraction.PlayerNearby ? "USE E" : "TERM") :
             label == "EXTRACTION" ? "EXIT" :
             (label == "KEY" || label == "LOCKED" || label == "OPEN" || label == "HIDDEN" || label == "HIDE BAY" ? label : "HIDE");
         float s = Mathf.Min(GetHudScale(), 1.25f);
-        float width = (label == "HIDDEN" || label == "HIDE BAY" ? 94f : 66f) * s;
+        float width = (compactLabel=="EXIT DOOR"?110f:label == "HIDDEN" || label == "HIDE BAY" ? 94f : 66f) * s;
         float height = 22f * s;
         float minY = GetTopBarHeight() + 5f;
         float maxY = Screen.height - GetBottomBarHeight() - height - 5f;
@@ -1027,10 +1182,10 @@ public class UXHUDController : MonoBehaviour
     {
         return (Screen.width < 800 ? 102f :
             (Screen.width < 1550 ? 74f : 54f)) * GetHudScale() +
-            (ExpandedFacility ? 32f * GetHudScale() : 0f);
+            (ExpandedFacility ? 56f * GetHudScale() : 0f);
     }
 
-    private bool ExpandedFacility => SceneManager.GetActiveScene().name == "UXFacilityExpanded";
+    private bool ExpandedFacility => UXCampaign.IsCampaignScene;
 
     private float GetBottomBarHeight()
     {
@@ -1110,8 +1265,15 @@ public class UXHUDController : MonoBehaviour
             "3   Follow the mission objectives to extraction.\n\n" +
             "RED: pursuit. Break sight and hide. YELLOW: searching.\n" +
             "Walk into an open blue bay. Green HIDDEN confirms cover.\n\n" +
-            "WASD move crouched   C / CTRL slow   SHIFT sprint\n" +
-            "TAB map   R restart (confirm)   ESC resume";
+            "WASD crouch   C / CTRL slow   SHIFT limited sprint\n" +
+            "No sprint recharge. TAB map   R restart   ESC resume";
+        if(UXCampaign.IsCrimson)instructions=
+            "1   Download each sector's data and hack its console.\n\n"+
+            "2   Follow the objectives to the extraction lift.\n\n"+
+            "Replay restores secured sectors; spent sprint stays spent.\n"+
+            "Enter blue bays; green HIDDEN confirms cover.\n\n"+
+            "WASD crouch   C / CTRL slow   SHIFT limited sprint\n"+
+            "TAB map   R restart level (confirm)   ESC resume";
 
         GUI.Label(
             new Rect(panel.x + 70f*s, panel.y + 115f*s,
@@ -1180,13 +1342,14 @@ public class UXHUDController : MonoBehaviour
 
         GUI.Label(
             new Rect(panel.x + 15f, panel.y + 28f, panel.width - 30f, 48f),
-            "RESTART MISSION?",
+            ExpandedFacility?"RESTART LEVEL?":"RESTART MISSION?",
             TitleStyle(26)
         );
 
         GUI.Label(
             new Rect(panel.x + 25f, panel.y + 88f, panel.width - 50f, 45f),
-            "Current mission progress will be lost.",
+            ExpandedFacility?"Current-level progress and checkpoints will be lost. Earlier level clears are kept.":
+                "Current mission progress will be lost.",
             CenterStyle(16, Color.white)
         );
 
@@ -1249,7 +1412,7 @@ public class UXHUDController : MonoBehaviour
 
         GUI.Label(
             new Rect(panel.x + 25f, panel.y + 88f, panel.width - 50f, 45f),
-            "Current mission progress will be lost.",
+            ExpandedFacility?"Progress since the last checkpoint will be lost.":"Current mission progress will be lost.",
             CenterStyle(16, Color.white)
         );
 
@@ -1291,8 +1454,11 @@ public class UXHUDController : MonoBehaviour
             return;
         }
 
-        bool won =
-            GameManager.Instance.PlayerWon;
+        bool won = GameManager.Instance.PlayerWon;
+        UXStealthDirector resultDirector=ExpandedFacility?UXStealthDirector.Instance:null;
+        if(!won && resultDirector!=null && resultDirector.Effects!=null && resultDirector.Effects.Replay.HasFrames)
+        { DrawDeathReplayResult(resultDirector.Effects.Replay,resultDirector);return; }
+        bool hardExtraction=won && resultDirector!=null && resultDirector.IsCrimson && resultDirector.Difficulty.Mode==UXDifficulty.Hard;
 
         //Records Player ID
         string playerID = GameplayMetrics.Instance != null
@@ -1325,10 +1491,9 @@ public class UXHUDController : MonoBehaviour
                 result.width - 50,
                 62
             ),
-            won
-                ? "MISSION COMPLETE"
-                : "MISSION FAILED",
-            TitleStyle(30)
+            won ? (hardExtraction ? "EXTRACTION CONFIRMED" : "MISSION COMPLETE") :
+                resultDirector!=null ? resultDirector.DeathHeadline : "MISSION FAILED",
+            CenterStyle(26,won?new Color(.35f,1f,.65f):new Color(1f,.45f,.32f))
         );
 
         GUI.Label(
@@ -1338,10 +1503,14 @@ public class UXHUDController : MonoBehaviour
                 result.width - 140,
                 45
             ),
-            won
-                ? "Evidence secured. Extraction successful."
-                : (ExpandedFacility ? "Health depleted. Break sight and hide when security is alerted." :
-                    "Security detected you. Try a different route."),
+            campaignLoadError??(won
+                ? (hardExtraction?"Crimson Depths cleared. Evidence uplink complete.":"Evidence secured. Extraction successful.")
+                : (UXStealthDirector.Instance!=null && UXStealthDirector.Instance.LastDamageCause=="PROXIMITY MINE" ?
+                    "Caught in a mine blast. Watch the warning ring and sprint clear." :
+                    UXStealthDirector.Instance!=null && UXStealthDirector.Instance.LastDamageCause=="LASER BARRIER" ?
+                    "Caught by a laser barrier. Wait for a safe gap before crossing." :
+                    ExpandedFacility ? "Health depleted. Break sight and hide when security is alerted." :
+                    "Security detected you. Try a different route.")),
             CenterStyle(15, Color.white)
         );
 
@@ -1349,8 +1518,8 @@ public class UXHUDController : MonoBehaviour
             GUI.Label(new Rect(result.x + 25f, result.y + 148f, result.width - 50f, 25f),
                 UXStealthDirector.Instance.Difficulty.Mode.ToString().ToUpperInvariant() +
                 (GameplayMetrics.Instance != null ? "  |  TIME " +
-                    UXPlayerProgress.FormatTime(GameplayMetrics.Instance.ElapsedSeconds) +
-                    "  |  DETECTIONS " + GameplayMetrics.Instance.TotalDetections : ""),
+                    UXPlayerProgress.FormatTime(UXCampaign.RunSeconds) +
+                    "  |  DETECTIONS " + UXCampaign.TotalDetections : ""),
                 CenterStyle(12, new Color(0.65f, 0.88f, 1f)));
 
         Rect retryButton =
@@ -1371,11 +1540,11 @@ public class UXHUDController : MonoBehaviour
 
         if (GUI.Button(
             retryButton,
-            "RETRY MISSION",
+            ExpandedFacility?(won?"REPLAY LEVEL":"REPLAY"):"RETRY MISSION",
             ActionButtonStyle(17)
         ))
         {
-            RetryMission();
+            ContinueMission();
         }
 
         if (GUI.Button(
@@ -1394,7 +1563,7 @@ public class UXHUDController : MonoBehaviour
                 result.width - 90,
                 35
             ),
-            "ENTER / SPACE  RETRY        ESC  MAIN MENU",
+            ExpandedFacility?"ENTER / SPACE  REPLAY        ESC  MAIN MENU":"ENTER / SPACE  RETRY        ESC  MAIN MENU",
             CenterStyle(
                 13,
                 new Color(0.65f, 0.88f, 1f)
@@ -1415,6 +1584,128 @@ public class UXHUDController : MonoBehaviour
 
     }
 
+    private void PaintReplayRect(Rect rect,Color color)
+    {
+        Color previous=GUI.color;GUI.color=color;GUI.DrawTexture(rect,Texture2D.whiteTexture);GUI.color=previous;
+    }
+
+    private Rect DrawReplayFrame(UXDeathReplay replay,Rect frame)
+    {
+        GUI.DrawTexture(frame,blackTex);Rect fitted=frame;
+        if(replay.CurrentFrame!=null)
+        {
+            RenderTexture image=replay.CurrentFrame;
+            float aspect=replay.PlaybackAspect;
+            float width=Mathf.Min(frame.width,frame.height*aspect),height=width/aspect;
+            fitted=new Rect(frame.x+(frame.width-width)*.5f,frame.y+(frame.height-height)*.5f,width,height);
+            GUI.DrawTextureWithTexCoords(fitted,image,replay.PlaybackUV,true);
+        }
+        Color previous=GUI.color;GUI.color=new Color(.30f,.65f,.76f);
+        DrawRectBorder(fitted,Texture2D.whiteTexture,1);GUI.color=previous;
+        return fitted;
+    }
+
+    private void DrawSecurityReplay(UXDeathReplay replay,Rect housing,float s,bool watchControl)
+    {
+        Color steel=new Color(.15f,.22f,.28f),ink=new Color(.025f,.045f,.065f),cyan=new Color(.35f,.88f,1f);
+        PaintReplayRect(housing,steel);
+        Rect inset=new Rect(housing.x+2f*s,housing.y+2f*s,housing.width-4f*s,housing.height-4f*s);
+        PaintReplayRect(inset,ink);
+        Rect header=new Rect(housing.x+12f*s,housing.y+7f*s,housing.width-24f*s,34f*s);
+        GUIStyle left=CenterStyle(Mathf.Max(10,Mathf.RoundToInt(14f*s)),cyan);left.alignment=TextAnchor.MiddleLeft;
+        GUI.Label(new Rect(header.x,header.y,header.width*.65f,header.height),replay.CameraLabel,left);
+        GUIStyle right=CenterStyle(Mathf.Max(9,Mathf.RoundToInt(12f*s)),new Color(.72f,.84f,.9f));right.alignment=TextAnchor.MiddleRight;
+        GUI.Label(new Rect(header.x+header.width*.65f,header.y,header.width*.35f,header.height),"COLOR / RECORDED",right);
+        Rect viewport=new Rect(housing.x+12f*s,housing.y+42f*s,housing.width-24f*s,housing.height-90f*s);
+        Rect picture=DrawReplayFrame(replay,viewport);
+        // Camera brackets remain outside the picture; no blur/grain/color filter.
+        float arm=16f*s,thick=Mathf.Max(1f,2f*s);
+        for(int side=0;side<2;side++)
+        {
+            float x=side==0?picture.x:picture.x+picture.width-arm;
+            PaintReplayRect(new Rect(x,picture.y,arm,thick),cyan);
+            PaintReplayRect(new Rect(x,picture.y+picture.height-thick,arm,thick),cyan);
+        }
+        for(int side=0;side<2;side++)
+        {
+            float x=side==0?picture.x:picture.x+picture.width-thick;
+            PaintReplayRect(new Rect(x,picture.y,thick,arm),cyan);
+            PaintReplayRect(new Rect(x,picture.y+picture.height-arm,thick,arm),cyan);
+        }
+        float stampWidth=Mathf.Min(picture.width-16f*s,340f*s);
+        Rect stamp=new Rect(picture.x+picture.width-stampWidth-8f*s,picture.y+8f*s,stampWidth,30f*s);
+        PaintReplayRect(stamp,new Color(.015f,.025f,.035f,.84f));
+        GUI.Label(stamp,replay.CurrentFrameTime.ToString("yyyy-MM-dd HH:mm:ss.fff",System.Globalization.CultureInfo.InvariantCulture),
+            CenterStyle(Mathf.Max(9,Mathf.RoundToInt(13f*s)),Color.white));
+        Rect footer=new Rect(housing.x+12f*s,housing.y+housing.height-44f*s,housing.width-24f*s,34f*s);
+        GUI.Label(new Rect(footer.x,footer.y,footer.width-(watchControl?175f*s:0f),footer.height),
+            "ARCHIVE PLAYBACK  "+replay.CursorSeconds.ToString("0.0")+"s / "+replay.ClipSeconds.ToString("0.0")+"s",
+            CenterStyle(Mathf.Max(9,Mathf.RoundToInt(12f*s)),new Color(.75f,.86f,.92f)));
+        if(watchControl)
+        {
+            Rect button=new Rect(footer.x+footer.width-164f*s,footer.y,164f*s,footer.height);
+            Color previous=GUI.color;GUI.color=cyan;DrawRectBorder(button,Texture2D.whiteTexture,1);GUI.color=previous;
+            GUIStyle watch=ActionButtonStyle(Mathf.Max(8,Mathf.RoundToInt(12f*s)));watch.padding=new RectOffset(0,0,0,0);
+            if(GUI.Button(new Rect(button.x+1,button.y+1,button.width-2,button.height-2),"WATCH AGAIN",watch))replay.WatchAgain();
+        }
+        PaintReplayRect(new Rect(housing.x+12f*s,housing.y+housing.height-6f*s,housing.width-24f*s,2f*s),new Color(.10f,.20f,.26f));
+        PaintReplayRect(new Rect(housing.x+12f*s,housing.y+housing.height-6f*s,(housing.width-24f*s)*replay.Progress,2f*s),cyan);
+    }
+
+    private GUIStyle ReplayPrimaryStyle(int size)
+    {
+        GUIStyle style=ActionButtonStyle(size);
+        style.normal.background=cyanTex;style.focused.background=cyanTex;
+        style.normal.textColor=new Color(.02f,.06f,.09f);style.focused.textColor=style.normal.textColor;
+        style.hover.textColor=new Color(.02f,.06f,.09f);style.active.textColor=new Color(.02f,.06f,.09f);
+        return style;
+    }
+
+    private void DrawAutomaticDeathReplay(UXDeathReplay replay,string headline)
+    {
+        float s=Mathf.Min(1.3f,Mathf.Min(Screen.width/1000f,Screen.height/650f));
+        GUI.DrawTexture(new Rect(0,0,Screen.width,Screen.height),blackTex);
+        GUI.Label(new Rect(16f*s,8f*s,Screen.width-32f*s,38f*s),"DEATH REPLAY / "+headline,
+            CenterStyle(Mathf.Max(13,Mathf.RoundToInt(21f*s)),new Color(1f,.60f,.46f)));
+        DrawSecurityReplay(replay,new Rect(18f*s,55f*s,Screen.width-36f*s,Screen.height-120f*s),s,false);
+        GUI.Label(new Rect(20f*s,Screen.height-52f*s,Screen.width-240f*s,38f*s),"ENTER / SPACE / ESC: SKIP REPLAY",
+            CenterStyle(Mathf.Max(10,Mathf.RoundToInt(14f*s)),Color.white));
+        if(GUI.Button(new Rect(Screen.width-210f*s,Screen.height-52f*s,190f*s,38f*s),"SKIP REPLAY",ReplayPrimaryStyle(Mathf.Max(11,Mathf.RoundToInt(14f*s)))))replay.SkipAuto();
+    }
+
+    private void DrawDeathReplayResult(UXDeathReplay replay,UXStealthDirector director)
+    {
+        float s=Mathf.Min(1.30f,Mathf.Min(Screen.width/1160f,Screen.height/900f));
+        Rect panel=new Rect((Screen.width-1080f*s)*.5f,(Screen.height-840f*s)*.5f,1080f*s,840f*s);
+        GUI.DrawTexture(new Rect(0,0,Screen.width,Screen.height),blackTex);
+        PaintReplayRect(panel,new Color(.025f,.037f,.055f));
+        PaintReplayRect(new Rect(panel.x,panel.y,panel.width,3f*s),new Color(.95f,.32f,.25f));
+        GUI.Label(new Rect(panel.x+20f*s,panel.y+19f*s,panel.width-40f*s,42f*s),director.DeathHeadline,
+            CenterStyle(Mathf.Max(12,Mathf.RoundToInt(29f*s)),new Color(1f,.68f,.56f)));
+        GUI.Label(new Rect(panel.x+28f*s,panel.y+66f*s,(panel.width-56f*s)*.45f,32f*s),
+            "MISSION FAILED / "+director.Difficulty.Mode.ToString().ToUpperInvariant()+" / "+UXPlayerProgress.FormatTime(replay.DeathMissionSeconds),
+            CenterStyle(Mathf.Max(8,Mathf.RoundToInt(14f*s)),new Color(.75f,.84f,.92f)));
+        GUI.Label(new Rect(panel.x+panel.width*.45f,panel.y+66f*s,panel.width*.55f-28f*s,32f*s),
+            "TIME OF DEATH  "+replay.DeathLocalTime.ToString("yyyy-MM-dd HH:mm:ss",System.Globalization.CultureInfo.InvariantCulture)+" LOCAL",
+            CenterStyle(Mathf.Max(8,Mathf.RoundToInt(13f*s)),new Color(.75f,.84f,.92f)));
+        DrawSecurityReplay(replay,new Rect(panel.x+28f*s,panel.y+108f*s,panel.width-56f*s,510f*s),s,true);
+        // A separate opaque action deck visibly sits BELOW the camera housing.
+        Rect actions=new Rect(panel.x+28f*s,panel.y+642f*s,panel.width-56f*s,145f*s);
+        PaintReplayRect(actions,new Color(.045f,.085f,.12f));
+        PaintReplayRect(new Rect(actions.x,actions.y,actions.width,2f*s),new Color(.25f,.72f,.88f));
+        GUI.Label(new Rect(actions.x+16f*s,actions.y+8f*s,actions.width-32f*s,32f*s),"CHOOSE YOUR NEXT ACTION",
+            CenterStyle(Mathf.Max(10,Mathf.RoundToInt(14f*s)),new Color(.48f,.88f,1f)));
+        Rect retry=new Rect(actions.x+24f*s,actions.y+41f*s,(actions.width-72f*s)*.5f,59f*s);
+        Rect menu=new Rect(retry.x+retry.width+24f*s,retry.y,retry.width,retry.height);
+        if(GUI.Button(retry,"REPLAY",ReplayPrimaryStyle(Mathf.Max(13,Mathf.RoundToInt(24f*s)))))ContinueMission();
+        Color previous=GUI.color;GUI.color=new Color(.5f,.70f,.82f);DrawRectBorder(menu,Texture2D.whiteTexture,Mathf.Max(1,Mathf.RoundToInt(s)));GUI.color=previous;
+        if(GUI.Button(new Rect(menu.x+2f*s,menu.y+2f*s,menu.width-4f*s,menu.height-4f*s),"MAIN MENU",ActionButtonStyle(Mathf.Max(13,Mathf.RoundToInt(24f*s)))))ReturnToMainMenu();
+        GUI.Label(new Rect(retry.x,actions.y+108f*s,retry.width,28f*s),"RESUME SAVED CHECKPOINT",CenterStyle(Mathf.Max(8,Mathf.RoundToInt(13f*s)),new Color(.72f,.86f,.92f)));
+        GUI.Label(new Rect(menu.x,actions.y+108f*s,menu.width,28f*s),"RETURN TO MISSION MENU",CenterStyle(Mathf.Max(8,Mathf.RoundToInt(13f*s)),new Color(.72f,.86f,.92f)));
+        GUI.Label(new Rect(panel.x+20f*s,panel.y+804f*s,panel.width-40f*s,28f*s),"ENTER / SPACE: REPLAY    |    ESC: MAIN MENU",
+            CenterStyle(Mathf.Max(9,Mathf.RoundToInt(12f*s)),new Color(.60f,.72f,.82f)));
+    }
+
     private void StartMission()
     {
         ConfigureMissionDifficulty();
@@ -1422,11 +1713,12 @@ public class UXHUDController : MonoBehaviour
         helpVisible = false;
         toastMessage = "";
         Time.timeScale = 1f;
-        ShowToast(ExpandedFacility ? "FIND THE GOLD KEYCARD - TAB OPENS THE MAP" :
+        ShowToast(UXCampaign.IsCrimson?"CRIMSON DEPTHS - SECURE THE DOCKS":ExpandedFacility ? "FIND THE GOLD KEYCARD - TAB OPENS THE MAP" :
             "COLLECT EVIDENCE - AVOID SECURITY", cyanTex, 3f);
 
         //Records when the player starts the mission
         GameplayMetrics.Instance?.StartSession();
+        if(ExpandedFacility)UXCampaign.BindTelemetrySession();
     }
 
     private void ConfigureMissionDifficulty()
@@ -1478,6 +1770,13 @@ public class UXHUDController : MonoBehaviour
 
     private void RetryMission()
     {
+        if(ExpandedFacility)
+        {
+            GameplayMetrics.Instance?.RecordRestart();GameplayMetrics.Instance?.EndSession("Restarted");
+            UXCampaign.RestartLevel(UXCampaign.SceneLevelId,UXPlayerProgress.Data.difficulty);
+            LoadCampaignScene(UXCampaign.ScenePath(UXCampaign.SceneLevelId),true);
+            return;
+        }
         //Records when player restarts the mission
         if (GameplayMetrics.Instance != null)
         {
@@ -1500,6 +1799,11 @@ public class UXHUDController : MonoBehaviour
 
     private void ReturnToMainMenu()
     {
+        if(ExpandedFacility)
+        {
+            UXCampaign.SaveClock();GameplayMetrics.Instance?.EndSession("Abandoned");
+            LoadCampaignScene(UXCampaign.FacilityScene,false);return;
+        }
         //Records the player leaving an unfinished mission
         GameplayMetrics.Instance?.EndSession("Abandoned");
 
@@ -1517,6 +1821,31 @@ public class UXHUDController : MonoBehaviour
         Scene activeScene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(activeScene.buildIndex);
     }
+
+    private void ContinueMission()
+    {
+        if(!ExpandedFacility){RetryMission();return;}
+        LoadCampaignScene(UXCampaign.PrepareReplay(),true);
+    }
+
+    private void LoadCampaignScene(string scene,bool autoStart,bool newBriefing=false)
+    {
+        if(!Application.CanStreamedLevelBeLoaded(scene))
+        {
+            UXCampaign.CancelAdvance();
+            campaignLoadError="Campaign unavailable in this build.";
+            if(missionMenu!=null)missionMenu.ErrorNotice="CAMPAIGN UNAVAILABLE IN THIS BUILD";
+            Debug.LogError("Campaign scene unavailable: "+scene+". Reopen Unity after importing the campaign update.");
+            return;
+        }
+        startGameplayAfterReload=autoStart;showBriefingAfterReload=newBriefing;
+        helpVisible=false;restartConfirmationVisible=false;mainMenuConfirmationVisible=false;
+        Time.timeScale=1f;
+        SceneManager.LoadScene(scene);
+    }
+
+    private void OnApplicationQuit(){if(ExpandedFacility)UXCampaign.SaveClock();}
+    private void OnApplicationPause(bool paused){if(paused && ExpandedFacility)UXCampaign.SaveClock();}
 
     private void DrawPanel(
         Rect rect,

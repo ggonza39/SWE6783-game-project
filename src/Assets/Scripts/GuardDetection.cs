@@ -63,6 +63,7 @@ public class GuardDetection : MonoBehaviour, IConeDetector
 
     private void Update()
     {
+        if(Time.timeScale<=0f)return;
         IsPlayerDetected = false;
 
         // Detection only proceeds when GameManager exists and the game has not ended

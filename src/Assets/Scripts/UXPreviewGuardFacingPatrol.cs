@@ -87,7 +87,7 @@ public sealed class UXPreviewGuardFacingPatrol : MonoBehaviour
             return;
 
         UXStealthDirector director = UXStealthDirector.Owns(gameObject) ? UXStealthDirector.Instance : null;
-        if (director != null && director.State.Responding) return;
+        if (director != null && director.GuardResponds(transform)) return;
 
         if (pauseRemaining > 0f)
         {
@@ -127,7 +127,8 @@ public sealed class UXPreviewGuardFacingPatrol : MonoBehaviour
         Vector2 destination = routePoints[targetPoint];
         if (Time.time >= repathAt)
         {
-            navigationPath = director.Path(transform.position, destination);
+            navigationPath = director.Path(transform.position, destination,
+                director.IsCrimson?UXSectorMission.Membership(transform):-1);
             navigationStep = 0;
             repathAt = Time.time + 0.65f;
         }

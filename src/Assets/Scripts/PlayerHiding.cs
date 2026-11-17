@@ -25,6 +25,7 @@ public class PlayerHiding : MonoBehaviour
     {
         bays = sceneBays != null && sceneBays.Length > 0 ? sceneBays : null;
     }
+    public void SynchronizeRestoredBay(){wasInBay=IsHidden;}
 
     private void Update()
     {

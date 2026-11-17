@@ -18,19 +18,24 @@ public sealed class UXLevelRecord
 [Serializable]
 public sealed class UXPlayerSaveData
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 4;
     public int schemaVersion = CurrentVersion;
     public string gameId = "PixelRebellion";
     public UXDifficulty difficulty = UXDifficulty.Easy;
     public bool showControlHints = true;
     public bool fullscreen = true;
     public List<UXLevelRecord> levels = new List<UXLevelRecord>();
+    public List<UXCampaignSlot> campaigns = new List<UXCampaignSlot>();
 
     public UXLevelRecord FindLevel(string levelId) => levels.Find(level => level.levelId == levelId);
+    public UXCampaignSlot FindCampaign(UXDifficulty mode) => campaigns.Find(slot => slot.mode == mode);
 
     public bool Validate()
     {
-        if (gameId != "PixelRebellion" || schemaVersion != CurrentVersion) return false;
+        if (gameId != "PixelRebellion" || (schemaVersion < 1 || schemaVersion > CurrentVersion)) return false;
+        bool migrate = schemaVersion == 1;
+        bool initializeSprint = schemaVersion < 3;
+        bool rebalanceSprint = schemaVersion == 3;
         if (!Enum.IsDefined(typeof(UXDifficulty), difficulty)) difficulty = UXDifficulty.Easy;
         if (levels == null) levels = new List<UXLevelRecord>();
         var ids = new HashSet<string>();
@@ -43,6 +48,29 @@ public sealed class UXPlayerSaveData
             if (!ValidTime(level.bestEasySeconds)) level.bestEasySeconds = 0f;
             if (!ValidTime(level.bestHardSeconds)) level.bestHardSeconds = 0f;
         }
+        if (campaigns == null) campaigns = new List<UXCampaignSlot>();
+        if (migrate)
+        {
+            campaigns.Clear();
+            UXLevelRecord facility = FindLevel(UXPlayerProgress.FacilityLevelId);
+            foreach (UXDifficulty mode in new[] { UXDifficulty.Easy, UXDifficulty.Hard })
+                if (facility != null && facility.Completed(mode)) campaigns.Add(new UXCampaignSlot {
+                    mode = mode, levelId = UXCampaign.CrimsonLevelId });
+            schemaVersion = CurrentVersion;
+        }
+        var modes = new HashSet<UXDifficulty>();
+        foreach (UXCampaignSlot slot in campaigns)
+        {
+            if(slot==null)return false;
+            if(initializeSprint)slot.sprintSeconds=UXSprintReserve.CapacitySeconds;
+            if(rebalanceSprint)
+            {
+                if(!ValidTime(slot.sprintSeconds) || slot.sprintSeconds>24f)return false;
+                slot.sprintSeconds=slot.sprintSeconds*(UXSprintReserve.CapacitySeconds/24f);
+            }
+            if(!slot.Validate() || !modes.Add(slot.mode))return false;
+        }
+        schemaVersion=CurrentVersion;
         return true;
     }
 
@@ -85,6 +113,10 @@ public sealed class UXProgressStore
         foreach (string field in new[] { "gameId", "schemaVersion", "difficulty", "showControlHints", "fullscreen", "levels" })
             if (!json.Contains("\"" + field + "\"")) return null;
         UXPlayerSaveData data = JsonUtility.FromJson<UXPlayerSaveData>(json);
+        if (data != null && data.schemaVersion >= 2 &&
+            !json.Contains("\"campaigns\"")) return null;
+        if(data!=null && data.schemaVersion>=3 && data.campaigns!=null && data.campaigns.Count>0 &&
+            !json.Contains("\"sprintSeconds\""))return null;
         return data != null && data.Validate() ? data : null;
     }
 
@@ -155,6 +187,16 @@ public sealed class UXProgressStore
             Debug.LogWarning("Player progress save failed: " + exception.Message);
             return false;
         }
+    }
+
+    public bool TryReplace(UXPlayerSaveData replacement)
+    {
+        if (replacement == null || !replacement.Validate() || preserveExisting) return false;
+        UXPlayerSaveData previous = Data;
+        Data = replacement;
+        if (Save()) return true;
+        Data = previous;
+        return false;
     }
 }
 

@@ -72,8 +72,7 @@ public class GameManager : MonoBehaviour
 
         UXStealthDirector director = UXStealthDirector.Instance;
         if (UXStealthDirector.Owns(gameObject) && director.MissionStarted)
-            UXPlayerProgress.CompleteFacility(director.Difficulty.Mode,
-                GameplayMetrics.Instance != null ? GameplayMetrics.Instance.ElapsedSeconds : 0f);
+            UXCampaign.Complete(director.LevelId,director.Difficulty.Mode,UXCampaign.RunSeconds);
 
         //Records if the player won the game
         GameplayMetrics.Instance?.EndSession("Won");
@@ -88,10 +87,11 @@ public class GameManager : MonoBehaviour
 
         GameEnded = true;
         PlayerWon = false;
+        if(UXStealthDirector.Owns(gameObject))UXCampaign.RecordDeath();
 
         //Records if the player lost the game
         GameplayMetrics.Instance?.EndSession("Lost");
 
-        Debug.Log("MISSION FAILED - Player was detected!");
+        Debug.Log("MISSION FAILED - " + (UXStealthDirector.Owns(gameObject) ? UXStealthDirector.Instance.DeathHeadline : "Player detected."));
     }
 }

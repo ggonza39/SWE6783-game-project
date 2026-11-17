@@ -9,6 +9,9 @@ EditorBuildSettings:
     path: Assets/Scenes/UXFacilityExpanded.unity
     guid: 8a11a0e739ac5342829e7a5bfa1a1498
   - enabled: 1
+    path: Assets/Scenes/UXCrimsonDepths.unity
+    guid: 02e25ea7e234570382980833d8f4419b
+  - enabled: 1
     path: Assets/Scenes/UXFacilityPreview.unity
     guid: d32ca93e7dd4d69458d67d547c3c6819
   - enabled: 1
