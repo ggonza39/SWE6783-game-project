@@ -28,6 +28,8 @@ public class UXHUDController : MonoBehaviour
     private bool restartOpenedFromPause = false;
     private bool lastTerminalActivatedForToast;
     private float lastSeenTerminalMessageTime = -1f;
+    private float interactionCompletedUntil = -1f;
+    private string interactionCompletedLabel = "";
 
     private bool TerminalAccessed =>
         GameManager.Instance != null && GameManager.Instance.TerminalActivated;
@@ -137,6 +139,8 @@ public class UXHUDController : MonoBehaviour
         restartOpenedFromPause = false;
         lastTerminalActivatedForToast = false;
         lastSeenTerminalMessageTime = -1f;
+        interactionCompletedUntil = -1f;
+        interactionCompletedLabel = "";
         toastMessage = "";
         toastUntil = 0f;
         toastBorder = cyanTex;
@@ -307,6 +311,7 @@ public class UXHUDController : MonoBehaviour
 
         if (evidence > lastEvidenceCount)
         {
+            ConfirmInteraction("DOWNLOAD COMPLETE");
             if (evidence >= totalEvidence)
             {
                 ShowToast(
@@ -339,6 +344,7 @@ public class UXHUDController : MonoBehaviour
         // no separate "TERMINAL ACCESS GRANTED" toast follows it.
         if (activated && !lastTerminalActivatedForToast)
         {
+            ConfirmInteraction("SECURITY HACKED - CAMERAS OFFLINE");
             ShowToast("EXIT UNLOCKED - REACH EXTRACTION", greenTex, 2.6f);
         }
 
@@ -754,13 +760,95 @@ public class UXHUDController : MonoBehaviour
         float s = GetHudScale();
         float bh = GetBottomBarHeight();
         Rect bar = new Rect(0f, Screen.height - bh, Screen.width, bh);
+        UXStealthDirector stealth = ExpandedFacility ? UXStealthDirector.Instance : null;
+        bool showMeter = stealth != null && (stealth.InteractionAvailable ||
+            interactionCompletedUntil > Time.time);
+        if (showMeter)
+            border = stealth.InteractionProgress <= 0f && interactionCompletedUntil > Time.time
+                ? greenTex : cyanTex;
         DrawPanel(bar, darkTex, border);
+        if (showMeter)
+        {
+            DrawInteractionMeter(stealth, bar, s);
+            return;
+        }
+
         GUI.Label(new Rect(12f * s, bar.y + 3f * s,
-            Screen.width - 24f * s, bh - 6f * s), message,
-            CenterStyle(Mathf.RoundToInt(15f * s), Color.white));
-        if (ExpandedFacility && UXStealthDirector.Instance != null && UXStealthDirector.Instance.InteractionProgress > 0f)
-            GUI.DrawTexture(new Rect(0f, bar.y, Screen.width *
-                Mathf.Clamp01(UXStealthDirector.Instance.InteractionProgress), 4f * s), cyanTex);
+            Screen.width - 24f * s, (ExpandedFacility ? 40f * s : bh) - 6f * s), message,
+            CenterStyle(Mathf.RoundToInt((Screen.width < 1000 ? 13f : 15f) * s), Color.white));
+        if (ExpandedFacility)
+            GUI.Label(new Rect(12f * s, bar.y + 47f * s,
+                Screen.width - 24f * s, 23f * s),
+                "HOLD E: INTERACT    |    TAB: MAP    |    ESC: PAUSE",
+                CenterStyle(Mathf.RoundToInt(12f * s), new Color(0.75f, 0.83f, 0.90f)));
+    }
+
+    private void ConfirmInteraction(string label)
+    {
+        if (!ExpandedFacility) return;
+        // Only confirmed evidence/terminal state changes can show 100% success.
+        interactionCompletedLabel = label;
+        interactionCompletedUntil = Time.time + 0.9f;
+    }
+
+    private void DrawInteractionMeter(UXStealthDirector stealth, Rect bar, float s)
+    {
+        float progress = Mathf.Clamp01(stealth.InteractionProgress);
+        bool active = progress > 0f;
+        bool completed = !active && interactionCompletedUntil > Time.time;
+        bool hacking = stealth.HackingSecurity;
+        Color accent = completed ? new Color(0.36f, 1f, 0.62f) :
+            new Color(0.20f, 0.88f, 1f);
+        string label = completed ? interactionCompletedLabel :
+            (hacking ? (active ? "HACKING SECURITY" : "HOLD E TO HACK SECURITY") :
+            (active ? "DOWNLOADING EVIDENCE" : "HOLD E TO DOWNLOAD EVIDENCE"));
+        // Keep the number outside the fill so its contrast never changes.
+        int percent = completed ? 100 : Mathf.Min(99, Mathf.FloorToInt(progress * 100f));
+        float padding = 24f * s;
+        float percentWidth = 76f * s;
+        GUIStyle title = TextStyle(Mathf.RoundToInt((Screen.width < 800 ? 12f : 14f) * s), Color.white);
+        title.alignment = TextAnchor.MiddleLeft;
+        title.fontStyle = FontStyle.Bold;
+        GUI.Label(new Rect(padding, bar.y + 6f * s,
+            bar.width - 2f * padding - percentWidth, 25f * s), label, title);
+        GUIStyle number = CenterStyle(Mathf.RoundToInt(20f * s), accent);
+        number.alignment = TextAnchor.MiddleRight;
+        GUI.Label(new Rect(bar.width - padding - percentWidth, bar.y + 4f * s,
+            percentWidth, 27f * s), percent + "%", number);
+
+        Rect track = new Rect(padding, bar.y + 36f * s,
+            bar.width - 2f * padding, 22f * s);
+        DrawProgressRect(track, Color.white);
+        float inset = Mathf.Max(2f, 2f * s);
+        Rect inner = new Rect(track.x + inset, track.y + inset,
+            track.width - inset * 2f, track.height - inset * 2f);
+        DrawProgressRect(inner, new Color(0.015f, 0.025f, 0.045f));
+        float fillWidth = inner.width * (completed ? 1f : progress);
+        if (fillWidth > 0f)
+        {
+            DrawProgressRect(new Rect(inner.x, inner.y, fillWidth, inner.height), accent);
+            if (!completed)
+            {
+                float edge = Mathf.Min(fillWidth, 2f * s);
+                DrawProgressRect(new Rect(inner.x + fillWidth - edge, inner.y,
+                    edge, inner.height), Color.white);
+            }
+        }
+
+        string hint = completed ? "COMPLETE - CONTINUE TO YOUR NEXT OBJECTIVE" :
+            (active ? "KEEP HOLDING E  |  RELEASE OR MOVE AWAY TO CANCEL" :
+            "HOLD E TO START  |  STAY CLOSE UNTIL THE BAR IS FULL");
+        GUI.Label(new Rect(padding, bar.y + 60f * s,
+            bar.width - 2f * padding, 19f * s), hint,
+            CenterStyle(Mathf.RoundToInt(11f * s), new Color(0.80f, 0.87f, 0.93f)));
+    }
+
+    private void DrawProgressRect(Rect bounds, Color color)
+    {
+        Color previous = GUI.color;
+        GUI.color = color;
+        GUI.DrawTexture(bounds, Texture2D.whiteTexture);
+        GUI.color = previous;
     }
 
     private void DrawObjectiveMarkers()
@@ -906,7 +994,8 @@ public class UXHUDController : MonoBehaviour
 
     private float GetBottomBarHeight()
     {
-        return 42f * GetHudScale();
+        // Reserve a stable footer so interaction feedback never covers gameplay.
+        return (ExpandedFacility ? 84f : 42f) * GetHudScale();
     }
 
     private int hudViewportWidth = -1;
