@@ -23,7 +23,7 @@ public sealed class UXCampaignSlot
         (!completed || (levelId == UXCampaign.CrimsonLevelId && checkpoint == 3)) &&
         !float.IsNaN(seconds) && !float.IsInfinity(seconds) && seconds >= 0f && detections>=0 &&
         !float.IsNaN(sprintSeconds) && !float.IsInfinity(sprintSeconds) && sprintSeconds>=0f &&
-        sprintSeconds<=UXSprintReserve.CapacitySeconds && mineSeed>=0;
+        sprintSeconds<=UXCampaign.CapacityForLevel(levelId) && mineSeed>=0;
 }
 
 // Campaign state is independent of scene objects. Only secured sectors are saved;
@@ -46,7 +46,10 @@ public static class UXCampaign
     private static string runningLevel;
     private static int baseDetections;
     public static UXSprintReserve Sprint { get; private set; }
-    public static float SprintRemaining => Sprint!=null ? Sprint.Remaining : UXSprintReserve.CapacitySeconds;
+    public static float CapacityForLevel(string levelId) => levelId == CrimsonLevelId ?
+        UXSprintReserve.CrimsonCapacitySeconds : UXSprintReserve.CapacitySeconds;
+    public static float SprintCapacity => Sprint!=null ? Sprint.Capacity : CapacityForLevel(SceneLevelId);
+    public static float SprintRemaining => Sprint!=null ? Sprint.Remaining : SprintCapacity;
     private static float sprintSavedAt, sprintRetryAt;
     private static bool sprintDirty;
     public static int TotalDetections => (int)Math.Min(int.MaxValue,(long)baseDetections+
@@ -69,12 +72,12 @@ public static class UXCampaign
     {
         UXCampaignSlot slot = GetOrCreate(mode);
         if (slot.levelId != levelId || slot.completed)
-        { slot.levelId = levelId; slot.checkpoint = 0; slot.seconds = 0f; slot.detections=0;slot.sprintSeconds=UXSprintReserve.CapacitySeconds;slot.completed = false;slot.retryPending=false;slot.mineSeed=0; }
+        { slot.levelId = levelId; slot.checkpoint = 0; slot.seconds = 0f; slot.detections=0;slot.sprintSeconds=CapacityForLevel(levelId);slot.completed = false;slot.retryPending=false;slot.mineSeed=0; }
         RefreshRetry(slot);
         if(slot.mineSeed==0)slot.mineSeed=NewMineSeed(0);
         runningMode = mode; runningLevel = levelId;
         RunSeconds = slot.seconds;baseDetections=slot.detections;Running = true; NeedsAdvance = false;
-        Sprint=new UXSprintReserve(slot.sprintSeconds);sprintSavedAt=Sprint.Remaining;sprintDirty=false;sprintRetryAt=0f;
+        Sprint=new UXSprintReserve(slot.sprintSeconds,CapacityForLevel(levelId));sprintSavedAt=Sprint.Remaining;sprintDirty=false;sprintRetryAt=0f;
         UXPlayerProgress.Store.Save();
         return slot.checkpoint;
     }
@@ -141,7 +144,7 @@ public static class UXCampaign
         if (levelId == UXPlayerProgress.FacilityLevelId)
         {
             slot.levelId = CrimsonLevelId; slot.checkpoint = 0; slot.seconds = 0f;slot.detections=0;
-            slot.sprintSeconds=UXSprintReserve.CapacitySeconds;slot.completed = false;slot.retryPending=false;slot.mineSeed=0; NeedsAdvance = true;
+            slot.sprintSeconds=CapacityForLevel(CrimsonLevelId);slot.completed = false;slot.retryPending=false;slot.mineSeed=0; NeedsAdvance = true;
         }
         else
         {
@@ -160,9 +163,9 @@ public static class UXCampaign
     private static void RefreshRetry(UXCampaignSlot slot)
     {
         if(!slot.retryPending)return;
-        slot.sprintSeconds=UXSprintReserve.CapacitySeconds;
+        slot.sprintSeconds=CapacityForLevel(slot.levelId);
         slot.mineSeed=NewMineSeed(slot.mineSeed);slot.retryPending=false;
-        Sprint=new UXSprintReserve(slot.sprintSeconds);
+        Sprint=new UXSprintReserve(slot.sprintSeconds,CapacityForLevel(slot.levelId));
         sprintSavedAt=Sprint.Remaining;sprintDirty=false;sprintRetryAt=0f;
     }
     public static int MineSeed => GetOrCreate(runningMode).mineSeed;
@@ -176,7 +179,7 @@ public static class UXCampaign
     public static string PrepareContinue()
     {
         UXCampaignSlot slot = GetOrCreate(UXPlayerProgress.Data.difficulty);
-        if (slot.completed) { slot.checkpoint = 0; slot.seconds = 0f;slot.detections=0;slot.sprintSeconds=UXSprintReserve.CapacitySeconds;slot.completed = false;slot.retryPending=false;slot.mineSeed=0; }
+        if (slot.completed) { slot.checkpoint = 0; slot.seconds = 0f;slot.detections=0;slot.sprintSeconds=CapacityForLevel(slot.levelId);slot.completed = false;slot.retryPending=false;slot.mineSeed=0; }
         RefreshRetry(slot);
         if(slot.mineSeed==0)slot.mineSeed=NewMineSeed(0);
         NeedsAdvance = false; Running = false;
@@ -188,7 +191,7 @@ public static class UXCampaign
     {
         UXCampaignSlot slot = GetOrCreate(mode);
         Log("LevelRestarted",mode,levelId,slot.checkpoint,RunSeconds,TotalDetections);
-        slot.levelId = levelId; slot.checkpoint = 0; slot.seconds = 0f;slot.detections=0;slot.sprintSeconds=UXSprintReserve.CapacitySeconds;slot.completed = false;slot.retryPending=false;slot.mineSeed=0;
+        slot.levelId = levelId; slot.checkpoint = 0; slot.seconds = 0f;slot.detections=0;slot.sprintSeconds=CapacityForLevel(levelId);slot.completed = false;slot.retryPending=false;slot.mineSeed=0;
         RunSeconds = 0f; baseDetections = 0; Sprint=null;sprintDirty=false;sprintRetryAt=0f;Running = false; NeedsAdvance = false;
         UXPlayerProgress.Store.Save();
     }

@@ -102,7 +102,8 @@ public static class CampaignChecks
             UXPlayerProgress.Data.difficulty=mode;
             if(UXPlayerProgress.Data.FindLevel("facility_01")==null)UXPlayerProgress.Data.RecordCompletion("facility_01",mode,100f);
             UXPlayerProgress.Data.campaigns.RemoveAll(slot=>slot.mode==mode);
-            UXPlayerProgress.Data.campaigns.Add(new UXCampaignSlot{mode=mode,levelId=UXCampaign.CrimsonLevelId,checkpoint=checkpoint});
+            UXPlayerProgress.Data.campaigns.Add(new UXCampaignSlot{mode=mode,levelId=UXCampaign.CrimsonLevelId,
+                checkpoint=checkpoint,sprintSeconds=UXSprintReserve.CrimsonCapacitySeconds});
             UXPlayerProgress.Store.Save();
         }
         var bodyGo=At("Player",Point(geometry.GetProperty("spawn")));bodyGo.tag="Player";
@@ -218,7 +219,7 @@ public static class CampaignChecks
         UXCampaign.Begin("facility_01",UXDifficulty.Easy);UXCampaign.Complete("facility_01",UXDifficulty.Easy,20f);
         var menu=new UXMissionMenuScreen();bool continued=false,reset=false;
         menu.ContinueRequested=()=>continued=true;menu.RestartConfirmed=()=>reset=true;
-        GUI.ButtonClick=t=>t=="CONTINUE  >";menu.Draw();Check(continued,"Continue did not request a saved campaign load.");
+        GUI.ButtonClick=t=>t=="CONTINUE LEVEL 2  >";menu.Draw();Check(continued,"Continue did not request a saved campaign load.");
         Set(menu,"resetVisible",true);GUI.ButtonClick=t=>t=="CANCEL";menu.Draw();
         Check(UXPlayerProgress.Data.levels.Count==1&&!reset,"Cancel reset campaign progress.");
         Set(menu,"resetVisible",true);Input.DownKeys.Add(KeyCode.Return);menu.HandleKeyboard();Input.DownKeys.Clear();
@@ -233,7 +234,7 @@ public static class CampaignChecks
                 File.WriteAllText(Path.Combine(directory,(modal?"reset_":"menu_")+width+".json"),JsonSerializer.Serialize(GUI.Calls,new JsonSerializerOptions{IncludeFields=true}));
             }
         }
-        Set(menu,"resetVisible",true);GUI.ButtonClick=t=>t=="RESTART GAME";menu.Draw();GUI.ButtonClick=null;
+        Set(menu,"resetVisible",true);GUI.ButtonClick=t=>t=="START NEW GAME";menu.Draw();GUI.ButtonClick=null;
         Check(reset && UXPlayerProgress.Data.levels.Count==0 && UXPlayerProgress.Data.campaigns.Count==0,"Confirmed reset did not clear both progress types.");
         return "Continue uses saved campaign; full reset requires confirmation; Cancel/Enter preserve records; responsive home/reset layouts at four sizes";
     }
