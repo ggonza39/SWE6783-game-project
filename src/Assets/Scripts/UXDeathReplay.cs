@@ -1,15 +1,26 @@
 using System;
 using System.Collections;
 using UnityEngine;
+#if UNITY_WEBGL && !UNITY_EDITOR
+using UnityEngine.Rendering;
+
+#endif
 
 // A bounded GPU-only buffer of the rendered Game view, including the real HUD,
 // guards, projectiles and hazard warning. Never rewinds/resimulates game objects,
 // reads pixels to the CPU, writes recordings to disk, or changes saved progress.
 public sealed class UXDeathReplay : MonoBehaviour
 {
+#if UNITY_WEBGL && !UNITY_EDITOR
+    // Keep four seconds of browser replay at lower GPU cost than desktop.
+    public const int Capacity = 40;
+    public const float SampleInterval = 1f / 10f;
+    public const int FrameWidth = 640, FrameHeight = 360;
+#else
     public const int Capacity = 80;
     public const float SampleInterval = 1f / 20f;
     public const int FrameWidth = 1280, FrameHeight = 720;
+#endif
     private const float PlaybackSpeed = 1f;
     private readonly RenderTexture[] frames = new RenderTexture[Capacity];
     private readonly DateTime[] frameTimes = new DateTime[Capacity];
@@ -74,7 +85,13 @@ public sealed class UXDeathReplay : MonoBehaviour
     {
         while (enabled)
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // Experimental: issue the offscreen replay render BEFORE Unity's
+            // normal camera render, allowing it to restore the screen viewport.
+            yield return null;
+#else
             yield return endOfFrame;
+#endif
             CaptureAtEndOfFrame();
             if (frozenAt >= 0f || unavailable) yield break;
         }
@@ -99,7 +116,43 @@ public sealed class UXDeathReplay : MonoBehaviour
         try
         {
             if (Screen.width < 1 || Screen.height < 1) return;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // WebGL capture path: render the live world camera off-screen.
+            // Do not call ScreenCapture.CaptureScreenshotIntoRenderTexture,
+            // which caused repeated full-canvas pulsing in the existing Web build.
+            if (sourceView == null) sourceView = Camera.main;
+            if (sourceView == null) return;
+            Rect region = sourceView.rect;
+            float left = Mathf.Clamp01(region.x), bottom = Mathf.Clamp01(region.y);
+            region = new Rect(left, bottom,
+                Mathf.Max(.01f, Mathf.Min(region.width, 1f - left)),
+                Mathf.Max(.01f, Mathf.Min(region.height, 1f - bottom)));
+            bool regionChanged = Mathf.Abs(region.x - capturedRegion.x) > .0001f ||
+                Mathf.Abs(region.y - capturedRegion.y) > .0001f ||
+                Mathf.Abs(region.width - capturedRegion.width) > .0001f ||
+                Mathf.Abs(region.height - capturedRegion.height) > .0001f;
+            if (regionChanged)
+            {
+                ReleaseAll(); count = 0; write = 0;
+                capturedRegion = region;
+            }
+            if (frames[write] == null)
+            {
+                float nativeWidth = Screen.width, nativeHeight = Screen.height;
+                float scale = Mathf.Min(1f,
+                    Mathf.Min(FrameWidth / nativeWidth, FrameHeight / nativeHeight));
+                int width = Mathf.Max(1, Mathf.RoundToInt(nativeWidth * scale));
+                int height = Mathf.Max(1, Mathf.RoundToInt(nativeHeight * scale));
+                frames[write] = MakeTexture(width, height, "WebGL_URP_Replay_Frame");
+            }
+            var request = new RenderPipeline.StandardRequest();
+            if (!RenderPipeline.SupportsRenderRequest(sourceView, request))
+                throw new InvalidOperationException("URP camera render requests are unsupported.");
+            request.destination = frames[write];
+            RenderPipeline.SubmitRenderRequest(sourceView, request);
+#else
             if(sourceView==null)sourceView=Camera.main;
+
             Rect region=sourceView!=null?sourceView.rect:new Rect(0f,0f,1f,1f);
             float left=Mathf.Clamp01(region.x),bottom=Mathf.Clamp01(region.y);
             region=new Rect(left,bottom,Mathf.Max(.01f,Mathf.Min(region.width,1f-left)),Mathf.Max(.01f,Mathf.Min(region.height,1f-bottom)));
@@ -124,6 +177,7 @@ public sealed class UXDeathReplay : MonoBehaviour
             // Keep the tested capture path. Playback composes the camera crop
             // with its existing backend orientation correction in a single UV.
             Graphics.Blit(capture, frames[write]);
+#endif
             frameTimes[write]=DateTime.Now;
             write = (write + 1) % Capacity; count = Mathf.Min(Capacity, count + 1);
         }
