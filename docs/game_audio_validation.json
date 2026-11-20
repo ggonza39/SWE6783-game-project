@@ -1,0 +1,18 @@
+{
+  "baseline": "66f9dfac78a68e6372c1de74ea91dfa9458b1c69",
+  "verification": [
+    "Runtime C# compile: passed",
+    "Audio event/mixing/save/menu checks: passed (.NET and PowerShell hosts)",
+    "Campaign/menu/stamina/save regressions: passed",
+    "Final map, knockback, random mines, full resource Replay, ending: passed",
+    "Death effects/replay orientation/crop/timestamps regressions: passed",
+    "32 WAV assets: inventory, hashes, format, non-silence, loops, true peaks, maximum-gain mix passed",
+    "PowerShell updater: syntax, LF/CRLF fresh install, exact rerun, dirty original preserved, conflict refusal passed",
+    "Actual serialized Level 1/2 scenes: references, assets and geometry checks passed"
+  ],
+  "needs_local_validation": [
+    "Unity Editor listening at normal volume",
+    "Windows executable smoke test after rebuilding",
+    "WebGL playback after rebuilding and clicking the browser game"
+  ]
+}

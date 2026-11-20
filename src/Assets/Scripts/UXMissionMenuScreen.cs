@@ -153,18 +153,33 @@ public sealed class UXMissionMenuScreen
 
     private void DrawSettings()
     {
-        Rect panel = new Rect(208f, 212f, 864f, 425f);
-        Fill(panel, Panel); Border(panel, Cyan);
-        Label(new Rect(240f, 236f, 800f, 42f), "PLAY YOUR WAY", 25, Color.white, true);
-        if (Button(new Rect(240f, 306f, 800f, 62f),
-            "DISPLAY: " + (UXPlayerProgress.Data.fullscreen ? "FULLSCREEN" : "WINDOWED")))
+        Rect panel=new Rect(208f,212f,864f,454f);
+        Fill(panel,Panel);Border(panel,Cyan);
+        Label(new Rect(240f,230f,800f,38f),"SETTINGS",25,Color.white,true);
+        if(Button(new Rect(240f,284f,386f,44f),"DISPLAY: "+(UXPlayerProgress.Data.fullscreen?"FULLSCREEN":"WINDOWED")))
             UXPlayerProgress.SetFullscreen(!UXPlayerProgress.Data.fullscreen);
-        Label(new Rect(240f, 376f, 800f, 23f), "Your preferred game-window display mode.", 13, Muted);
-        if (Button(new Rect(240f, 418f, 800f, 62f),
-            "CONTROL REMINDERS: " + (UXPlayerProgress.Data.showControlHints ? "ON" : "OFF")))
+        if(Button(new Rect(650f,284f,390f,44f),"CONTROL HINTS: "+(UXPlayerProgress.Data.showControlHints?"ON":"OFF")))
             UXPlayerProgress.SetControlHints(!UXPlayerProgress.Data.showControlHints);
-        Label(new Rect(240f, 488f, 800f, 23f), "Interaction prompts and progress feedback stay visible.", 13, Muted);
-        if (Button(new Rect(240f, 548f, 350f, 52f), "BACK TO MENU")) settingsVisible = false;
+        if(Button(new Rect(240f,350f,800f,44f),"SOUND: "+(UXPlayerProgress.Data.audioMuted?"MUTED":"ON")))
+            UXPlayerProgress.SetAudio(UXPlayerProgress.Data.musicVolume,UXPlayerProgress.Data.effectsVolume,!UXPlayerProgress.Data.audioMuted);
+        DrawVolume(422f,"MUSIC",true);
+        DrawVolume(496f,"SOUND EFFECTS",false);
+        if(Button(new Rect(240f,590f,350f,50f),"BACK TO MENU"))settingsVisible=false;
+    }
+
+    private void DrawVolume(float y,string label,bool music)
+    {
+        float value=music?UXPlayerProgress.Data.musicVolume:UXPlayerProgress.Data.effectsVolume;
+        Label(new Rect(240f,y,350f,40f),label,17,Color.white,true);
+        Label(new Rect(912f,y,128f,40f),Mathf.RoundToInt(value*100f)+"%",17,Cyan,true,TextAnchor.MiddleRight);
+        bool lower=Button(new Rect(585f,y,52f,40f),"-");
+        bool higher=Button(new Rect(826f,y,52f,40f),"+");
+        Fill(new Rect(655f,y+14f,150f,12f),Ink);
+        Fill(new Rect(655f,y+14f,150f*value,12f),UXPlayerProgress.Data.audioMuted?Muted:Cyan);
+        if(!lower && !higher)return;
+        value=Mathf.Clamp01(Mathf.RoundToInt((value+(higher?.1f:-.1f))*20f)/20f);
+        UXPlayerProgress.SetAudio(music?value:UXPlayerProgress.Data.musicVolume,
+            music?UXPlayerProgress.Data.effectsVolume:value,UXPlayerProgress.Data.audioMuted);
     }
 
     private void ActivatePrimary()
@@ -225,7 +240,9 @@ public sealed class UXMissionMenuScreen
         Border(bounds, primary || hovered ? Cyan : new Color(0.20f, 0.48f, 0.56f), hovered ? 2f : 1f);
         GUIStyle style = Style(Mathf.Max(10, Mathf.RoundToInt((bounds.height < 30f ? 10f : 17f) * scale)),
             primary ? Ink : Color.white, true, TextAnchor.MiddleCenter);
-        return GUI.Button(ScreenRect(bounds), text, style);
+        bool clicked=GUI.Button(ScreenRect(bounds), text, style);
+        if(clicked)UXGameAudio.UI();
+        return clicked;
     }
 
     private Rect ScreenRect(Rect bounds) => new Rect(offset.x + bounds.x * scale,

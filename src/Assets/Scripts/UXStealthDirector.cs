@@ -112,6 +112,7 @@ public sealed class UXStealthDirector : MonoBehaviour
             RebuildNavigation();
         }
         Effects?.Begin();
+        UXGameAudio.Unlock();UXGameAudio.Play(UXAudioCue.Deploy);
     }
 
     private void Awake()
@@ -157,6 +158,7 @@ public sealed class UXStealthDirector : MonoBehaviour
         RebuildNavigation();
         if(IsCrimson)Hazards=UXCrimsonHazards.Create(this);
         Effects=UXMissionEffects.Create(this);
+        UXGameAudio.Attach(this);
     }
 
     private void Update()
@@ -201,6 +203,7 @@ public sealed class UXStealthDirector : MonoBehaviour
             DetectionUtility.HasLineOfSight(player.position, key.transform.position, player, sightHits, key.transform))
         {
             KeyAcquired = true;
+            UXGameAudio.Play(UXAudioCue.Keycard);
             key.SetActive(false);
             if (gate != null) gate.enabled = false;
             if (gateArt != null) gateArt.enabled = false;
@@ -296,6 +299,7 @@ public sealed class UXStealthDirector : MonoBehaviour
         if (PlayerHidden || GameManager.Instance == null || GameManager.Instance.GameEnded ||
             !State.TryDamage(Difficulty.HitDamage)) return;
         LastDamageCause="GUARD FIRE";
+        if(State.Alive)UXGameAudio.Play(UXAudioCue.Hit);
         Notice("HIT! BREAK SIGHT AND REACH MARKED COVER", 2f);
         if (!State.Alive) FinishFatalHit();
     }
@@ -305,6 +309,8 @@ public sealed class UXStealthDirector : MonoBehaviour
         if(!IsCrimson || !MissionStarted || PlayerHidden || GameManager.Instance==null || GameManager.Instance.GameEnded ||
             !(lethal ? State.TryLethalHazard() : State.TryHazardDamage(amount)))return false;
         LastDamageCause=cause;Notice(cause+" HIT - GET CLEAR!",2f);
+        if(cause=="LASER BARRIER")UXGameAudio.Play(UXAudioCue.LaserBurn);
+        else if(State.Alive)UXGameAudio.Play(UXAudioCue.Hit);
         if(!State.Alive)FinishFatalHit();
         return true;
     }

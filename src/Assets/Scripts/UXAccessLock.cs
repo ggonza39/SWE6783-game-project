@@ -53,6 +53,7 @@ public sealed class UXAccessLock : MonoBehaviour
     {
         if (IsUnlocked) return;
         IsUnlocked = true; Door.enabled = false; leaf.enabled = false;
+        if(UXStealthDirector.Owns(gameObject))UXGameAudio.Play(UXAudioCue.Door);
         foreach (SpriteRenderer stripe in stripes) stripe.enabled = false;
         screen.color = new Color(0.25f, 1f, 0.5f);
     }

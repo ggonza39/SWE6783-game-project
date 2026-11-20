@@ -1,0 +1,7 @@
+Gunshots by kurt
+Source: https://opengameart.org/content/gunshots
+Original attachment: 22 Pistol.wav
+Author-listed license: CC0 1.0 Universal
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Retrieved: 2026-11-19
+Edits: isolated two single shots; mono downmix; resampling; high/low-pass EQ; fades; peak normalization.

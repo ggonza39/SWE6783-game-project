@@ -18,12 +18,15 @@ public sealed class UXLevelRecord
 [Serializable]
 public sealed class UXPlayerSaveData
 {
-    public const int CurrentVersion = 5;
+    public const int CurrentVersion = 6;
     public int schemaVersion = CurrentVersion;
     public string gameId = "PixelRebellion";
     public UXDifficulty difficulty = UXDifficulty.Easy;
     public bool showControlHints = true;
     public bool fullscreen = true;
+    public float musicVolume = .55f;
+    public float effectsVolume = .75f;
+    public bool audioMuted;
     public List<UXLevelRecord> levels = new List<UXLevelRecord>();
     public List<UXCampaignSlot> campaigns = new List<UXCampaignSlot>();
 
@@ -33,6 +36,10 @@ public sealed class UXPlayerSaveData
     public bool Validate()
     {
         if (gameId != "PixelRebellion" || (schemaVersion < 1 || schemaVersion > CurrentVersion)) return false;
+        bool initializeAudio = schemaVersion < 6;
+        if(initializeAudio){musicVolume=.55f;effectsVolume=.75f;audioMuted=false;}
+        musicVolume=ValidTime(musicVolume)?Math.Min(1f,musicVolume):.55f;
+        effectsVolume=ValidTime(effectsVolume)?Math.Min(1f,effectsVolume):.75f;
         bool migrate = schemaVersion == 1;
         bool initializeSprint = schemaVersion < 3;
         bool rebalanceSprint = schemaVersion == 3;
@@ -120,6 +127,9 @@ public sealed class UXProgressStore
         foreach (string field in new[] { "gameId", "schemaVersion", "difficulty", "showControlHints", "fullscreen", "levels" })
             if (!json.Contains("\"" + field + "\"")) return null;
         UXPlayerSaveData data = JsonUtility.FromJson<UXPlayerSaveData>(json);
+        if(data!=null && data.schemaVersion>=6)
+            foreach(string field in new[]{"musicVolume","effectsVolume","audioMuted"})
+                if(!json.Contains("\""+field+"\""))return null;
         if (data != null && data.schemaVersion >= 2 &&
             !json.Contains("\"campaigns\"")) return null;
         if(data!=null && data.schemaVersion>=3 && data.campaigns!=null && data.campaigns.Count>0 &&
@@ -220,7 +230,14 @@ public static class UXPlayerProgress
 
     public static void SelectDifficulty(UXDifficulty mode)
     {
+        UXGameAudio.UI();
         Data.difficulty = mode == UXDifficulty.Hard ? UXDifficulty.Hard : UXDifficulty.Easy;
+        Store.Save();
+    }
+
+    public static void SetAudio(float music,float effects,bool muted)
+    {
+        Data.musicVolume=Mathf.Clamp01(music);Data.effectsVolume=Mathf.Clamp01(effects);Data.audioMuted=muted;
         Store.Save();
     }
 

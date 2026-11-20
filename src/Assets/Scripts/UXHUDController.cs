@@ -1730,18 +1730,21 @@ public class UXHUDController : MonoBehaviour
 
     private void PauseGame()
     {
+        if(ExpandedFacility)UXGameAudio.UI();
         helpVisible = true;
         Time.timeScale = 0f;
     }
 
     private void ResumeGame()
     {
+        if(ExpandedFacility)UXGameAudio.UI();
         helpVisible = false;
         Time.timeScale = 1f;
     }
 
     private void RequestRestart()
     {
+        if(ExpandedFacility)UXGameAudio.UI();
         restartOpenedFromPause = helpVisible;
         restartConfirmationVisible = true;
         Time.timeScale = 0f;
@@ -1749,6 +1752,7 @@ public class UXHUDController : MonoBehaviour
 
     private void CancelRestart()
     {
+        if(ExpandedFacility)UXGameAudio.UI();
         restartConfirmationVisible = false;
         helpVisible = restartOpenedFromPause;
         restartOpenedFromPause = false;
@@ -1757,12 +1761,14 @@ public class UXHUDController : MonoBehaviour
 
     private void RequestMainMenu()
     {
+        if(ExpandedFacility)UXGameAudio.UI();
         mainMenuConfirmationVisible = true;
         Time.timeScale = 0f;
     }
 
     private void CancelMainMenu()
     {
+        if(ExpandedFacility)UXGameAudio.UI();
         mainMenuConfirmationVisible = false;
         // This dialog is reached from Pause/Help: return to pause safely.
         Time.timeScale = helpVisible ? 0f : 1f;
@@ -1799,6 +1805,7 @@ public class UXHUDController : MonoBehaviour
 
     private void ReturnToMainMenu()
     {
+        if(ExpandedFacility)UXGameAudio.UI();
         if(ExpandedFacility)
         {
             UXCampaign.SaveClock();GameplayMetrics.Instance?.EndSession("Abandoned");
@@ -1824,6 +1831,7 @@ public class UXHUDController : MonoBehaviour
 
     private void ContinueMission()
     {
+        if(ExpandedFacility)UXGameAudio.UI();
         if(!ExpandedFacility){RetryMission();return;}
         LoadCampaignScene(UXCampaign.PrepareReplay(),true);
     }
