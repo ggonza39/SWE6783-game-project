@@ -144,6 +144,8 @@ public sealed class UXSectorMission : MonoBehaviour
             if(SecuredSectors==3)GameManager.Instance.ActivateTerminal();
             director.RefreshNavigation();
             bool saved=UXCampaign.SecureSector(SecuredSectors);
+            UXGameAudio.StopMineWarnings();
+            UXGameAudio.Play(UXAudioCue.Checkpoint);
             director.Notice(saved ? "SECTOR SECURED - DEFENSES OFF - CHECKPOINT SAVED" : "SECTOR SECURED - SAVE UNAVAILABLE",4f);
         }
         else if(target==ExitDoor && SecuredSectors==3)

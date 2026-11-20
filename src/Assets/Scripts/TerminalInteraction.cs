@@ -78,6 +78,7 @@ public class TerminalInteraction : MonoBehaviour
         }
 
         activated = true;
+        if(UXStealthDirector.Owns(gameObject))UXGameAudio.Play(UXAudioCue.Security);
         if (completesMission) GameManager.Instance?.ActivateTerminal();
         DisableLinkedCameras();
         Notify("TERMINAL ACCESS GRANTED - Security camera disabled.", TerminalMessageTone.Success);

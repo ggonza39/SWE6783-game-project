@@ -24,6 +24,7 @@ public class EvidenceCollectible : MonoBehaviour
         {
             collected = true;
             manager.CollectEvidence(evidenceValue);
+            if(UXStealthDirector.Owns(gameObject))UXGameAudio.Play(UXAudioCue.Data);
             Debug.Log("Evidence collected.");
             Destroy(gameObject);
         }

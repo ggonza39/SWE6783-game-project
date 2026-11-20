@@ -98,9 +98,10 @@ public sealed class UXCrimsonHazards : MonoBehaviour
             Mine mine=mines[i];Vector2 at=minePositions[i];bool wasArmed=mine.state.Armed;
             bool trigger=!mine.state.Spent && !mine.state.Neutralized && !mine.state.Armed && !hidden && SegmentDistance(previousPlayer,player,at)<=TriggerRadius && Visible(at,player);
             bool explode=mine.state.Tick(dt,trigger);
-            if(!wasArmed && mine.state.Armed){mine.revealed=true;UXCampaign.RecordHazard("MineArmed_"+i);}
+            if(!wasArmed && mine.state.Armed){mine.revealed=true;UXGameAudio.At(UXAudioCue.MineArmed,at);UXCampaign.RecordHazard("MineArmed_"+i);}
             if(explode)
             {
+                UXGameAudio.MineExploded(at);
                 mine.burst=.55f;director.InvestigateNoise(at);
                 bool exposed=!hidden && Vector2.Distance(player,at)<=BlastRadius && Visible(at,player);
                 LastExplosionAt=at;
@@ -115,7 +116,12 @@ public sealed class UXCrimsonHazards : MonoBehaviour
         }
         for(int i=0;i<lasers.Length;i++)
         {
-            Laser laser=lasers[i];laser.state.Tick(dt);Vector2 at=LaserPositions[i];
+            Laser laser=lasers[i];UXLaserPhase before=laser.state.Phase;laser.state.Tick(dt);Vector2 at=LaserPositions[i];
+            if(laser.state.Phase!=before)
+            {
+                if(laser.state.Phase==UXLaserPhase.Warning)UXGameAudio.At(UXAudioCue.LaserCharge,at);
+                else if(laser.state.Phase==UXLaserPhase.Active)UXGameAudio.At(UXAudioCue.LaserOn,at);
+            }
             bool crosses=UXLaserState.Crosses(previousPlayer.x,previousPlayer.y,player.x,player.y,at.x,at.y,3.5f,.90f);
             if(laser.state.Phase==UXLaserPhase.Active && crosses && !hidden && Visible(at,player) &&
                 director.HazardHit(100,"LASER BARRIER",true))

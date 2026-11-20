@@ -59,6 +59,7 @@ public sealed class UXGuardResponse : MonoBehaviour
                     DetectionUtility.HasLineOfSight(transform.position, director.Player.position,
                         transform, sightHits, director.Player))
                 {
+                    UXGameAudio.At(UXAudioCue.Shot,transform.position);
                     director.Hit(); fireAt = Time.time + director.Difficulty.ShotCooldown; flashUntil = Time.time + 0.08f;
                 }
             }

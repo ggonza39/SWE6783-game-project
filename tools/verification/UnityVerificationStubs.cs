@@ -23,6 +23,17 @@ public class Component:Object {
  public T GetComponentInParent<T>() where T:Component {var c=GetComponent<T>();return c??transform.parent?.GetComponentInParent<T>();}
  public bool CompareTag(string s)=>gameObject.tag==s;
 }
+public class AudioClip:Object {
+ public float length=1f;public static Dictionary<string,float> Lengths=new Dictionary<string,float>();public static HashSet<string> Missing=new HashSet<string>();
+ public static AudioClip Load(string p)=>Missing.Contains(p)?null:new AudioClip{name=p,length=Lengths.TryGetValue(p,out var value)?value:1f};
+}
+public class AudioListener:MonoBehaviour {public bool isActiveAndEnabled=>enabled&&gameObject.activeSelf;}
+public class AudioSource:MonoBehaviour {
+ public static List<string> Played=new List<string>();
+ public static List<string> History=new List<string>();public AudioClip clip;public bool playOnAwake,loop;public float spatialBlend,volume,dopplerLevel,pitch=1f,panStereo;public int priority;
+ private bool playing;private float began;public bool isPlaying=>playing&&(loop||clip!=null&&Time.unscaledTime<began+clip.length);
+ public void Play(){if(clip!=null){playing=true;began=Time.unscaledTime;History.Add(clip.name);Played.Add(clip.name);}}public void Stop(){playing=false;}
+}
 public class MonoBehaviour:Component {public bool enabled=true;public object StartCoroutine(System.Collections.IEnumerator routine)=>null;}
 public class GameObject:Object {
  public string tag;public int layer;public bool activeSelf=true;public UnityEngine.SceneManagement.Scene scene=UnityEngine.SceneManagement.SceneManager.Active;
@@ -111,7 +122,7 @@ public static class Graphics {public static void Blit(Texture source,RenderTextu
 public class WaitForEndOfFrame {}
 public class Sprite:Object {public static Sprite Create(Texture2D t,Rect r,Vector2 p,float unit,uint e=0,SpriteMeshType m=SpriteMeshType.FullRect)=>new Sprite();}
 public class SpriteRenderer:Component {public Sprite sprite;public Color color;public int sortingOrder,sortingLayerID;public bool enabled=true;}
-public static class Resources {public static T Load<T>(string p) where T:class {if(typeof(T)==typeof(Texture2D))return new Texture2D(1254,1254){name=p} as T;if(typeof(T)==typeof(Sprite))return new Sprite() as T;return null;}}
+public static class Resources {public static T Load<T>(string p) where T:class {if(typeof(T)==typeof(AudioClip))return AudioClip.Load(p) as T;if(typeof(T)==typeof(Texture2D))return new Texture2D(1254,1254){name=p} as T;if(typeof(T)==typeof(Sprite))return new Sprite() as T;return null;}}
 public class Camera:MonoBehaviour {public static Camera main;public float orthographicSize=5.4f;public float aspect=>Screen.width*rect.width/(Screen.height*rect.height);public Rect rect=new Rect(0,0,1,1);public Rect pixelRect=>new Rect(0,0,Screen.width,Screen.height);public Vector3 WorldToScreenPoint(Vector3 p)=>new Vector3(Screen.width/2+p.x*40,Screen.height/2+p.y*40,1);}
 public enum TextAnchor {UpperLeft,UpperCenter,UpperRight,MiddleLeft,MiddleCenter,MiddleRight,LowerLeft,LowerCenter,LowerRight}
 public enum FontStyle {Normal,Bold} public class RectOffset {public RectOffset(int l,int r,int t,int b){}}
@@ -136,13 +147,14 @@ public class Event {public static Event current=new Event();public Vector2 mouse
 public static class Screen {public static int width=1280,height=720;public static bool fullScreen=true;}
 public static class Time {public static float time,deltaTime=.016f,fixedDeltaTime=.02f,timeScale=1,unscaledTime=1;}
 public enum KeyCode {C,LeftControl,RightControl,LeftShift,RightShift,E,Tab,R,Escape,Return,Space,Y,N,KeypadEnter,LeftArrow,RightArrow,UpArrow,DownArrow}
-public static class Input {public static HashSet<KeyCode> Keys=new HashSet<KeyCode>(),DownKeys=new HashSet<KeyCode>();public static bool GetKey(KeyCode k)=>Keys.Contains(k);public static bool GetKeyDown(KeyCode k)=>DownKeys.Contains(k);public static HashSet<int> MouseButtons=new HashSet<int>();public static bool GetMouseButton(int n)=>MouseButtons.Contains(n);public static Dictionary<string,float> Axes=new Dictionary<string,float>();public static float GetAxisRaw(string s)=>Axes.TryGetValue(s,out var value)?value:0;}
+public static class Input {public static HashSet<KeyCode> Keys=new HashSet<KeyCode>(),DownKeys=new HashSet<KeyCode>();public static bool anyKeyDown=>DownKeys.Count>0;public static bool GetMouseButtonDown(int n)=>MouseButtons.Contains(n);public static bool GetKey(KeyCode k)=>Keys.Contains(k);public static bool GetKeyDown(KeyCode k)=>DownKeys.Contains(k);public static HashSet<int> MouseButtons=new HashSet<int>();public static bool GetMouseButton(int n)=>MouseButtons.Contains(n);public static Dictionary<string,float> Axes=new Dictionary<string,float>();public static float GetAxisRaw(string s)=>Axes.TryGetValue(s,out var value)?value:0;}
 public static class Application {public static bool isPlaying=true,isBatchMode=false,isEditor=false;public static bool ScenesAvailable=true;public static bool CanStreamedLevelBeLoaded(string path)=>ScenesAvailable;public static string dataPath;public static string persistentDataPath=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"pixel-rebellion-isolated-"+Guid.NewGuid().ToString("N"));public static void Quit(){}}
 public static class JsonUtility { public static T FromJson<T>(string json)=>System.Text.Json.JsonSerializer.Deserialize<T>(json,new System.Text.Json.JsonSerializerOptions{IncludeFields=true}); public static string LastJson;public static string ToJson(object value,bool pretty=false){LastJson=System.Text.Json.JsonSerializer.Serialize(value,value.GetType(),new System.Text.Json.JsonSerializerOptions{IncludeFields=true,WriteIndented=pretty});return LastJson;} }
 public static class Debug {public static void Log(string s){}public static void LogWarning(string s,Object c=null){}public static void LogError(string s,Object c=null){}}
 public static class Gizmos {public static Color color;public static void DrawWireSphere(Vector3 p,float r){}public static void DrawRay(Vector3 p,Vector3 d){}}
 public static class Random {public static float Fraction;public static bool ChooseUpper;public static int Range(int a,int b)=>ChooseUpper?b-1:a;public static float Range(float a,float b)=>a+(b-a)*Fraction;public static Vector2 insideUnitCircle=>new Vector2(.5f,.5f);}
 public static class Mathf {
+ public static float Lerp(float a,float b,float t)=>a+(b-a)*Clamp01(t);
  public const float PI=(float)Math.PI,Deg2Rad=(float)Math.PI/180,Rad2Deg=180/(float)Math.PI,Epsilon=float.Epsilon;
  public static float Abs(float f)=>Math.Abs(f);public static float Min(float a,float b)=>Math.Min(a,b);public static int Min(int a,int b)=>Math.Min(a,b);public static float Max(float a,float b)=>Math.Max(a,b);public static int Max(int a,int b)=>Math.Max(a,b);
  public static float Sin(float a)=>(float)Math.Sin(a);public static float Cos(float a)=>(float)Math.Cos(a);public static float Exp(float a)=>(float)Math.Exp(a);public static float Atan2(float y,float x)=>(float)Math.Atan2(y,x);public static int FloorToInt(float a)=>(int)Math.Floor(a);public static float Ceil(float a)=>(float)Math.Ceiling(a);public static int RoundToInt(float a)=>(int)Math.Round(a);

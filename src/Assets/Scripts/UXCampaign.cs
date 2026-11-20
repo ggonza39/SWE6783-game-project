@@ -200,7 +200,8 @@ public static class UXCampaign
     {
         UXPlayerSaveData old = UXPlayerProgress.Data;
         var fresh = new UXPlayerSaveData { difficulty = old.difficulty,
-            fullscreen = old.fullscreen, showControlHints = old.showControlHints };
+            fullscreen = old.fullscreen, showControlHints = old.showControlHints,
+            musicVolume=old.musicVolume,effectsVolume=old.effectsVolume,audioMuted=old.audioMuted };
         if (!UXPlayerProgress.Store.TryReplace(fresh)) return false;
         Log("CampaignReset",old.difficulty,"campaign",0,RunSeconds,TotalDetections);
         ResetRuntime(); return true;

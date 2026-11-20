@@ -1,0 +1,258 @@
+{
+  "shot": {
+    "seconds": 0.3087,
+    "channels": 1,
+    "peak_dbfs": -1.21,
+    "rms_dbfs": -29.21,
+    "sha256": "1397b006ebcbeb94d1e6f1ce12144e4bf1d431bf9d17f4e3c2b9ed77303b0a1e",
+    "origin": "kurt: Gunshots / 22 Pistol.wav (CC0); trimmed, EQ, mono"
+  },
+  "shot_alt": {
+    "seconds": 0.2949,
+    "channels": 1,
+    "peak_dbfs": -1.21,
+    "rms_dbfs": -28.21,
+    "sha256": "86ac9d1da10e1bc7ca30f10262103b136c23e20495c69d8378fce115b9daf2a9",
+    "origin": "kurt: Gunshots / 22 Pistol.wav (CC0); trimmed, EQ, mono"
+  },
+  "ui": {
+    "seconds": 0.0116,
+    "channels": 1,
+    "peak_dbfs": -3.74,
+    "rms_dbfs": -13.66,
+    "sha256": "3be0aa1e5f86e05d0277f40088273bf75b34f4f5472c2a2224f15c9630634fdb",
+    "origin": "Kenney interface-sounds / click_002 (CC0); edited"
+  },
+  "hide": {
+    "seconds": 0.061,
+    "channels": 1,
+    "peak_dbfs": -3.74,
+    "rms_dbfs": -26.34,
+    "sha256": "a2e038fac36e1b4bbd8b0ad81b2a7a6c9ed1a4a14c075a628cade5e21a3a1c05",
+    "origin": "Kenney interface-sounds / back_001 (CC0); edited"
+  },
+  "reveal": {
+    "seconds": 0.0404,
+    "channels": 1,
+    "peak_dbfs": -3.74,
+    "rms_dbfs": -18.8,
+    "sha256": "81849f17715764ca65194e871f5d0e46e28363f5688b27b948fe79e55dbdac29",
+    "origin": "Kenney interface-sounds / select_002 (CC0); edited"
+  },
+  "step": {
+    "seconds": 0.103,
+    "channels": 1,
+    "peak_dbfs": -4.15,
+    "rms_dbfs": -22.27,
+    "sha256": "e91e921ec1110521582d3f60039bdea03c4a8eb469e736a7029f346eda04c49a",
+    "origin": "Kenney impact-sounds / footstep_concrete_000 (CC0); edited"
+  },
+  "step_alt": {
+    "seconds": 0.1047,
+    "channels": 1,
+    "peak_dbfs": -4.15,
+    "rms_dbfs": -22.59,
+    "sha256": "bf37271de75cf14a6b07c9427b60843e552e03129cc0d5476a301f6721e2a1f9",
+    "origin": "Kenney impact-sounds / footstep_concrete_001 (CC0); edited"
+  },
+  "sprint_step": {
+    "seconds": 0.1076,
+    "channels": 1,
+    "peak_dbfs": -4.15,
+    "rms_dbfs": -22.61,
+    "sha256": "bd6f4e09e6d1a78a6606effe0b6d227c20f26b13f3ebdaa5703915cadd3161c4",
+    "origin": "Kenney impact-sounds / footstep_concrete_003 (CC0); edited"
+  },
+  "door": {
+    "seconds": 0.5316,
+    "channels": 1,
+    "peak_dbfs": -1.72,
+    "rms_dbfs": -16.12,
+    "sha256": "40355957fdb874ec4b2d89d169b4888ddc78e417febb41c3eb942c7762fe6552",
+    "origin": "Kenney sci-fi-sounds / doorOpen_000 (CC0); edited"
+  },
+  "hit": {
+    "seconds": 0.36,
+    "channels": 1,
+    "peak_dbfs": -1.94,
+    "rms_dbfs": -16.56,
+    "sha256": "6dee8cd4295547f0e53f9f34c9aa5b1bde198f3126503df3a47e0c2cdafada4f",
+    "origin": "Kenney impact-sounds / impactSoft_heavy_001 (CC0); edited"
+  },
+  "guard_death": {
+    "seconds": 0.5692,
+    "channels": 1,
+    "peak_dbfs": -1.62,
+    "rms_dbfs": -18.38,
+    "sha256": "ebaa34d95112fda681a70930961dcd595269c31eb380650a89ccc011644cf9c0",
+    "origin": "Kenney CC0: impactSoft_heavy_001 + slime_000; body impact, no explosion"
+  },
+  "mine_death": {
+    "seconds": 0.5413,
+    "channels": 1,
+    "peak_dbfs": -1.72,
+    "rms_dbfs": -17.76,
+    "sha256": "5cb90c5a4184aeb6dca9f9971dc5e4672f1c3344830d76d1f213402a7ce859ce",
+    "origin": "Kenney CC0: slime_000 + impactSoft_heavy_003; fragment impact layer"
+  },
+  "mine_blast": {
+    "seconds": 2.0001,
+    "channels": 1,
+    "peak_dbfs": -1.01,
+    "rms_dbfs": -18.31,
+    "sha256": "18ea441fc4819b148344989dd60a9ed64068a3281081c1f905728671320b5180",
+    "origin": "Kenney CC0: explosionCrunch_002 + lowFrequency_explosion_000; layered blast"
+  },
+  "laser_burn": {
+    "seconds": 0.9551,
+    "channels": 1,
+    "peak_dbfs": -1.31,
+    "rms_dbfs": -13.94,
+    "sha256": "672d04f3ccdb2c7d92cb3549294cb8951f9e2653f692d9623fa2b844da0a539b",
+    "origin": "Kenney CC0: forceField_002 + laserLarge_004; electric burn"
+  },
+  "laser_charge": {
+    "seconds": 0.5,
+    "channels": 1,
+    "peak_dbfs": -2.85,
+    "rms_dbfs": -10.74,
+    "sha256": "1c12bba0f6e077b2c79eddc2b754f224f7f550342f6ee900ab958953b4c661cf",
+    "origin": "Kenney sci-fi-sounds / forceField_001 (CC0); edited"
+  },
+  "laser_on": {
+    "seconds": 0.55,
+    "channels": 1,
+    "peak_dbfs": -2.5,
+    "rms_dbfs": -16.98,
+    "sha256": "fa10724009b9aad2908a078cc56d7e890a3fef01b9b798271d7f39ed4a0733b4",
+    "origin": "Kenney sci-fi-sounds / laserLarge_001 (CC0); edited"
+  },
+  "mine_armed": {
+    "seconds": 1.14,
+    "channels": 1,
+    "peak_dbfs": -2.16,
+    "rms_dbfs": -13.98,
+    "sha256": "a5a570688e53aea324c7214f18714d9843b61a0d438aea359a58e98182063ce2",
+    "origin": "Original procedural composition"
+  },
+  "deploy": {
+    "seconds": 0.86,
+    "channels": 1,
+    "peak_dbfs": -1.94,
+    "rms_dbfs": -13.11,
+    "sha256": "eb64b62cf8193c19bf4a1ca6fba61ad81e8cec2105babef611942be5f68e9d29",
+    "origin": "Original procedural composition"
+  },
+  "data": {
+    "seconds": 0.6,
+    "channels": 1,
+    "peak_dbfs": -1.94,
+    "rms_dbfs": -14.55,
+    "sha256": "3416d2a87c3fb389d2fa54d7cc3883280a0d99553e6d4b12306483d11aeebc63",
+    "origin": "Original procedural composition"
+  },
+  "keycard": {
+    "seconds": 0.74,
+    "channels": 1,
+    "peak_dbfs": -1.94,
+    "rms_dbfs": -13.91,
+    "sha256": "352f7187457ea9c87df33599a76ee4d8a4d624c80bc16b73fbaed330acf57e96",
+    "origin": "Original procedural composition"
+  },
+  "security": {
+    "seconds": 0.76,
+    "channels": 1,
+    "peak_dbfs": -1.94,
+    "rms_dbfs": -14.04,
+    "sha256": "6a9c0cd4025a0aeb13aad7f7b4714db642bbe49f7eb61bc6ec3095fcc0a89e19",
+    "origin": "Original procedural composition"
+  },
+  "checkpoint": {
+    "seconds": 0.92,
+    "channels": 1,
+    "peak_dbfs": -1.94,
+    "rms_dbfs": -13.02,
+    "sha256": "7c387c1f0e316300122a0002e3a72f038859d712d40b732aae15e9c0eb094bb9",
+    "origin": "Original procedural composition"
+  },
+  "level_clear": {
+    "seconds": 1.08,
+    "channels": 1,
+    "peak_dbfs": -1.94,
+    "rms_dbfs": -12.73,
+    "sha256": "b3209fa3f283dca55cbcf8d0167b6f4be8559ff1363dcf80c614157bea6233cc",
+    "origin": "Original procedural composition"
+  },
+  "victory": {
+    "seconds": 1.97,
+    "channels": 1,
+    "peak_dbfs": -1.94,
+    "rms_dbfs": -13.12,
+    "sha256": "98f71672eabbf9d8825372139049ba7336caa7d854457ce0e2450b71fd76a8fa",
+    "origin": "Original procedural composition"
+  },
+  "failed": {
+    "seconds": 1.26,
+    "channels": 1,
+    "peak_dbfs": -1.94,
+    "rms_dbfs": -13.45,
+    "sha256": "12929b3f65674e7c9fa23a732f91aa2c2e287936a87d00139328bbc7a5bee20e",
+    "origin": "Original procedural composition"
+  },
+  "sprint_empty": {
+    "seconds": 0.7,
+    "channels": 1,
+    "peak_dbfs": -1.94,
+    "rms_dbfs": -14.07,
+    "sha256": "4a4c5b1457355a390318e4dfd979bfe4f60b5042db66143629fc16d7331bf4ce",
+    "origin": "Original procedural composition"
+  },
+  "suspicion": {
+    "seconds": 0.3,
+    "channels": 1,
+    "peak_dbfs": -3.35,
+    "rms_dbfs": -12.6,
+    "sha256": "c2bbab5f599146fe624270e4f183fc247743eb34b014e013021dba5a22b39d23",
+    "origin": "Original procedural composition"
+  },
+  "alert": {
+    "seconds": 0.64,
+    "channels": 1,
+    "peak_dbfs": -2.38,
+    "rms_dbfs": -12.71,
+    "sha256": "00e6f6d06411a961eb9bb495aba756961d282182f603688fcf101e65eff2933c",
+    "origin": "Original procedural composition"
+  },
+  "interaction_loop": {
+    "seconds": 2.0,
+    "channels": 1,
+    "peak_dbfs": -3.88,
+    "rms_dbfs": -17.56,
+    "sha256": "f450b84ad956d3fa19bdd254f62271e570f59aa7d236cc8f1f0b8f920e2bccb7",
+    "origin": "Original procedural composition"
+  },
+  "alarm_loop": {
+    "seconds": 3.0,
+    "channels": 1,
+    "peak_dbfs": -3.88,
+    "rms_dbfs": -10.74,
+    "sha256": "dec050b576865e1e44a58f7c834ceb7f21e2e81a6e0f9abae901064e921fa36a",
+    "origin": "Original procedural composition"
+  },
+  "music_facility": {
+    "seconds": 24.6154,
+    "channels": 2,
+    "peak_dbfs": -5.19,
+    "rms_dbfs": -19.25,
+    "sha256": "9649221bad873ad2e04c04a0f5225434a541f18dfbe5f1bf70c6d3e1d741da67",
+    "origin": "Original eight-bar procedural score composed for Pixel Rebellion; no external music"
+  },
+  "music_crimson": {
+    "seconds": 20.8696,
+    "channels": 2,
+    "peak_dbfs": -5.19,
+    "rms_dbfs": -19.57,
+    "sha256": "e919d9e11e83928f09a40ead1d3ccfd115458e357e28a06d3a9c4899f59e4623",
+    "origin": "Original eight-bar procedural score composed for Pixel Rebellion; no external music"
+  }
+}
